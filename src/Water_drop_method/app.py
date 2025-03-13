@@ -1,5 +1,5 @@
 """
-A colectios of scripts to implement the Water drop method to determine the strutural stability of soil aggregates
+A colection of scripts to implement the Water drop method to determine the strutural stability of soil aggregates
 """
 
 import toga

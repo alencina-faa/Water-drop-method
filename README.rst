@@ -5,7 +5,7 @@ Water drop method
 `The BeeWare Project`_. **If you want to see more tools like Briefcase, please
 consider** `becoming a financial member of BeeWare`_.
 
-A colectios of scripts to implement the Water drop method to determine the strutural stability of soil aggregates
+A colection of scripts to implement the Water drop method to determine the strutural stability of soil aggregates
 
 .. _`Briefcase`: https://briefcase.readthedocs.io/
 .. _`The BeeWare Project`: https://beeware.org/
