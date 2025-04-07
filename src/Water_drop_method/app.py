@@ -7,7 +7,7 @@ from toga.style import Pack
 from toga.style.pack import COLUMN, ROW
 
 
-class Waterdropmethod(toga.App):
+class WaterDropMethod(toga.App):
     def startup(self):
         """Construct and show the Toga application.
 
@@ -15,12 +15,31 @@ class Waterdropmethod(toga.App):
         We then create a main window (with a name matching the app), and
         show the main window.
         """
-        main_box = toga.Box()
-
+        
         self.main_window = toga.MainWindow(title=self.formal_name)
-        self.main_window.content = main_box
         self.main_window.show()
+
+        
+        camera = toga.Box()
+        set_threshold = toga.Box()
+        meaurement = toga.Box()
+        
+        container = toga.OptionContainer(
+            content=[
+                toga.OptionItem("Camera", camera),
+                toga.OptionItem("Set Threshold", set_threshold),
+                toga.OptionItem("Measurement", meaurement)
+
+            ]
+        )
+
+        self.main_window.content = container
+
+
 
 
 def main():
-    return Waterdropmethod()
+    return WaterDropMethod('Water Drop Method', 'ar.edu.unicen.faa.azul.waterdropmethod')
+
+if __name__ == "__main__":
+    main().main_loop()
