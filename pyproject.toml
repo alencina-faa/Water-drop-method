@@ -21,6 +21,13 @@ test_sources = [
 ]
 
 requires = [
+    "pillow",
+    "tkinter",
+    "numpy",
+    "matplotlib",
+    "time",
+    "src/Water_drop_method/Camera.py",
+    "src/Water_drop_method/DAC.py"
 ]
 test_requires = [
     "pytest",
