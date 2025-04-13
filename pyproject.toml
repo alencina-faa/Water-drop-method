@@ -10,7 +10,7 @@ author_email = "alencina@azul.faa.unicen.edu.ar"
 
 [tool.briefcase.app.Water-drop-method]
 formal_name = "Water drop method"
-description = "A colectios of scripts to implement the Water drop method to determine the strutural stability of soil aggregates"
+description = "A collection of scripts to implement the Water drop method to determine the strutural stability of soil aggregates"
 long_description = """More details about the app should go here.
 """
 sources = [

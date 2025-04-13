@@ -25,9 +25,12 @@ class NIUSB6009:
         """Read a single sample from the task."""
         return self.task.read()
     
-    def stop_close(self):
-        """Stop and close the task."""
+    def stop(self):
+        """Stop the task."""
         self.task.stop()
+        
+    def close(self):
+        """Close the task."""
         self.task.close()
     
 
