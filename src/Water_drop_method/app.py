@@ -151,14 +151,6 @@ class WaterDropMethod:
         )
         self.confirm_button.pack(side=tk.LEFT, padx=2)
         
-        self.retry_button = ttk.Button(
-            self.confirm_frame,
-            text='Retry',
-            command=self.retry_threshold,
-            state=tk.DISABLED
-        )
-        self.retry_button.pack(side=tk.LEFT, padx=2)
-        
         # Create a frame for the threshold plot
         self.threshold_plot_frame = ttk.Frame(self.threshold_frame)
         self.threshold_plot_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
@@ -395,8 +387,7 @@ class WaterDropMethod:
         # Connect the click event
         self.canvas.mpl_connect('button_press_event', self.on_plot_click)
         
-        # Enable the retry button (confirm will be enabled after a click)
-        self.retry_button.config(state=tk.NORMAL)
+        # Disable the confirm button initially
         self.confirm_button.config(state=tk.DISABLED)
     
     def on_plot_click(self, event):
@@ -428,7 +419,6 @@ class WaterDropMethod:
             
             # Disable the buttons
             self.confirm_button.config(state=tk.DISABLED)
-            self.retry_button.config(state=tk.DISABLED)
             
             # Here you would typically store the threshold for later use
             # or proceed to the next step in your application
@@ -438,24 +428,6 @@ class WaterDropMethod:
 
             f.close()
     
-    def retry_threshold(self):
-        """Retry the threshold selection."""
-        # Clear the threshold value
-        self.threshold_value = None
-        
-        # Clear the previous plot
-        self.ax.clear()
-        
-        # Redraw just the data
-        self.ax.plot(self.measurement_values[:, 0], self.measurement_values[:, 1])
-        self.ax.set_title("Click to set threshold level")
-        
-        # Update the canvas
-        self.canvas.draw()
-        
-        # Disable the confirm button
-        self.confirm_button.config(state=tk.DISABLED)
-
     def save_file_as(self):
         self.nombrevid = fd.asksaveasfilename(defaultextension = 'avi',filetypes=[('Avi Files', '*.avi'), ('All Files', '*.*')])
         if self.nombrevid:
@@ -533,11 +505,16 @@ class WaterDropMethod:
             # All initial frames written, show message and start measurement
             messagebox.showinfo("Start measurement", "If drops are ready, press OK to start measurement.")
             
-            # Only for test purposes - generate random value
-            self.rng = np.random.default_rng()
-            # Uncomment this line to use the actual measurement code
-            #self.measurer = dac(device_name="Dev1", channel="ai0", sample_rate=1000, samples_per_channel=10000)
-            #self.measurer.start()
+            #Set procedure acording to the selected DAC
+            if self.DAC_var_measure.get() == "NIUSB6009":
+                # Start the measurement process
+                self.measurer = dac(device_name="Dev1", channel="ai0", sample_rate=1000, samples_per_channel=10000)
+                self.measurer.start()
+
+            elif self.DAC_var_measure.get() == "Test":
+                # Start the test process
+                self.rng = np.random.default_rng()
+                
 
             # Start the actual measurement process
             self.process_measurement()
@@ -552,16 +529,20 @@ class WaterDropMethod:
             # Measurement stopped by user
             self.finish_measurement()
             return 
-    
-        # Only for test purposes - generate random value
-        value = self.rng.random()
-        # Uncomment this line to use the actual measurement code
-        #value = self.measurer.measure()   
+        
+        if self.DAC_var_measure.get() == "Test":
+            value = self.rng.random()   
+
+        else:
+            value = self.measurer.measure()
     
         # Check if value is below threshold
         if value < self.threshold:
-            #Stop the measurer task
-            #self.measurer.stop()
+            
+            if self.DAC_var_measure.get() != "Test":
+                #Stop the measurer task
+                self.measurer.stop()
+
             # Capture and write a frame after a short delay
             if hasattr(self, 'camera'):
                 # Correctly delay the snapshot by 50ms
@@ -582,8 +563,9 @@ class WaterDropMethod:
         self.current_drops += 1
         self.measured_drops_label.config(text='Number of drops registered: ' + str(self.current_drops))
     
-        #Starts the measurer task again
-        #self.measurer.start()
+        if self.DAC_var_measure.get() != "Test":
+            #Starts the measurer task again
+            self.measurer.start()
 
         # Continue processing
         self.process_measurement()
