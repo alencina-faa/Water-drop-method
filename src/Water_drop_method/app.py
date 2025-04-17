@@ -8,7 +8,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
-import time
+import os
+
 
 class WaterDropMethod:
     def __init__(self, root):
@@ -46,7 +47,7 @@ class WaterDropMethod:
         self.threshold_value = None
 #Ends the mainwindow definitions
 
-#Starts the tabs definitions
+#STARTS THE TABS DEFINITIONS
 # Setup the camera tab
     def setup_camera_tab(self):
         # Create a frame for buttons
@@ -99,6 +100,23 @@ class WaterDropMethod:
         threshold_controls_frame = ttk.Frame(self.threshold_frame)
         threshold_controls_frame.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
         
+        # Add DAC selection dropdown
+        DAC_frame_threshold = ttk.Frame(threshold_controls_frame)
+        DAC_frame_threshold.pack(pady=5)
+        
+        DAC_label_threshold = ttk.Label(DAC_frame_threshold, text="DAC Device:")
+        DAC_label_threshold.pack(side=tk.TOP)
+        
+        self.DAC_var_threshold = tk.StringVar(value="Test")
+        self.DAC_combo_threshold = ttk.Combobox(
+            DAC_frame_threshold,
+            textvariable=self.DAC_var_threshold,
+            values=["Test", "NIUSB6009"],
+            width=5,
+            state="readonly"
+        )
+        self.DAC_combo_threshold.pack(side=tk.TOP)
+
         # Add label and input for number of measures
         measures_label = ttk.Label(
             threshold_controls_frame,
@@ -151,7 +169,7 @@ class WaterDropMethod:
         measurement_controls_frame = ttk.Frame(self.measurement_frame)
         measurement_controls_frame.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
         
-        # Add device selection dropdown
+        # Add camera selection dropdown
         device_frame_measure = ttk.Frame(measurement_controls_frame)
         device_frame_measure.pack(pady=5)
         
@@ -167,6 +185,23 @@ class WaterDropMethod:
             state="readonly"
         )
         self.device_combo_measure.pack(side=tk.TOP)
+        
+        # Add DAC selection dropdown
+        DAC_frame_measure = ttk.Frame(measurement_controls_frame)
+        DAC_frame_measure.pack(pady=5)
+        
+        DAC_label = ttk.Label(DAC_frame_measure, text="DAC Device:")
+        DAC_label.pack(side=tk.TOP)
+        
+        self.DAC_var_measure = tk.StringVar(value="Test")
+        self.DAC_combo_measure = ttk.Combobox(
+            DAC_frame_measure,
+            textvariable=self.DAC_var_measure,
+            values=["Test", "NIUSB6009"],
+            width=5,
+            state="readonly"
+        )
+        self.DAC_combo_measure.pack(side=tk.TOP)
         
         # Add label and input for number of drops
         measures_drops_label = ttk.Label(
@@ -232,7 +267,7 @@ class WaterDropMethod:
             text='Number of drops registered: ' + str(0)
         )
         self.measured_drops_label.pack(pady=(50, 5))
-#Ends the tabs definitions
+#ENDS THE TABS DEFINITIONS
 
     def start_preview(self, *args):
         """Start the camera preview."""
@@ -241,6 +276,7 @@ class WaterDropMethod:
         cam.stop
         dac.stop
         dac.close
+
         
         # Get selected device
         selected_device = int(self.device_var.get())
@@ -296,6 +332,7 @@ class WaterDropMethod:
         cam.stop
         dac.stop
         dac.close
+
         # Get the number of measures from the input field
         try:
             measures = int(self.measures_var.get())
@@ -305,31 +342,35 @@ class WaterDropMethod:
             messagebox.showerror("Error", "Please enter a valid positive number for measures.")
             return
 
-        # Generate random values for testing (replace with actual measurement code)
-        rng = np.random.default_rng()
-        values = np.array([[i, rng.random()] for i in range(measures)])
-        
-        """# Uncomment this section to use the actual measurement code
-        # Start the measurement process
-        measurer = dac(device_name="Dev1", channel="ai0", sample_rate=1000, samples_per_channel=10000)
-        measurer.start()
-        
-        i = 0
-        values=[]
-        while i < int(measures):
+        #Set procedure acording to the selected DAC
+        if self.DAC_var_threshold.get() == "NIUSB6009":
+            
+            # Start the measurement process
+            measurer = dac(device_name="Dev1", channel="ai0", sample_rate=1000, samples_per_channel=10000)
+            measurer.start()
+            
+            i = 0
+            values=[]
+            while i < int(measures):
+                    
+                value = measurer.measure()
                 
-            value = measurer.measure()
-            
-            values.append([i,value])
-            
-            
-            
-            i += 1
+                values.append([i,value])
+                
+                
+                
+                i += 1
 
-        values = np.array(values)
-        measurer.stop()
-        measurer.close()
-        """
+            values = np.array(values)
+            measurer.stop()
+            measurer.close()
+
+        elif self.DAC_var_threshold.get() == "Test":
+            # Start the test process
+            file_path = os.path.join(os.path.dirname(__file__), "for_test.tsv")
+            with open(file_path) as f:
+                lines = f.readlines()
+                values = np.array([list(map(float, line.split())) for line in lines])[:measures]
 
         # Store the values for later use
         self.measurement_values = values
@@ -419,6 +460,7 @@ class WaterDropMethod:
         self.nombrevid = fd.asksaveasfilename(defaultextension = 'avi',filetypes=[('Avi Files', '*.avi'), ('All Files', '*.*')])
         if self.nombrevid:
             self.start_measurement_button.config(state=tk.NORMAL)
+            self.measured_drops_label.config(text='Number of drops registered: ' + str(0))
             
 
     def start_measurement(self):
@@ -428,6 +470,7 @@ class WaterDropMethod:
         cam.stop
         dac.stop
         dac.close
+
         # Get the number of drops from the input field
         try:
             self.total_drops = int(self.measures_drops.get())
@@ -501,10 +544,14 @@ class WaterDropMethod:
     
     def process_measurement(self):
         """Process measurements in a non-blocking way."""
-        if not self.measuring or self.current_drops >= self.total_drops:
+        if self.current_drops >= self.total_drops:
             # Measurement complete or stopped
             self.finish_measurement()
             return
+        elif not self.measuring:
+            # Measurement stopped by user
+            self.finish_measurement()
+            return 
     
         # Only for test purposes - generate random value
         value = self.rng.random()
@@ -543,6 +590,13 @@ class WaterDropMethod:
     
     def finish_measurement(self):
         """Clean up after measurement is complete."""
+        # Show completion message
+        if self.current_drops >= self.total_drops:
+            messagebox.showinfo("Measurement Complete", f"Successfully recorded {self.current_drops} drops.")
+        else:
+            messagebox.showinfo("Measurement Stopped", f"Measurement stopped after recording {self.current_drops} drops.")
+    
+        
         #Stop and close the measurer task
         #self.measurer.stop()
         #self.measurer.close()
@@ -561,16 +615,12 @@ class WaterDropMethod:
         # Disable the stop button
         self.stop_measurement_button.config(state=tk.DISABLED)
         
-        # Show completion message
-        if self.current_drops >= self.total_drops:
-            messagebox.showinfo("Measurement Complete", f"Successfully recorded {self.current_drops} drops.")
-    
+        
     def stop_measurement(self):
         """Stop the measurement."""
         # Set flag to stop the measurement process
         self.measuring = False
-        # Disable the stop button
-        self.stop_measurement_button.config(state=tk.DISABLED)
+        
         
         
         
