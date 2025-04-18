@@ -25,11 +25,15 @@ class WaterDropMethod:
         self.camera_frame = ttk.Frame(self.notebook)
         self.threshold_frame = ttk.Frame(self.notebook)
         self.measurement_frame = ttk.Frame(self.notebook)
+        self.drop_energy_frame = ttk.Frame(self.notebook)
+        self.video_processing_frame = ttk.Frame(self.notebook)
         
         # Add tabs to notebook
         self.notebook.add(self.camera_frame, text="Camera")
         self.notebook.add(self.threshold_frame, text="Set Threshold")
         self.notebook.add(self.measurement_frame, text="Measurement")
+        self.notebook.add(self.drop_energy_frame, text="Drop Energy")
+        self.notebook.add(self.video_processing_frame, text="Video Processing")
         
         # Setup Camera tab
         self.setup_camera_tab()
@@ -39,6 +43,12 @@ class WaterDropMethod:
 
         # Setup Measurement tab
         self.setup_measurement_tab()
+        
+        # Setup Drop energy tab
+        self.setup_drop_energy_tab()
+        
+        # Setup Video processing tab
+        #self.setup_video_proc_tab()
         
         # Global camera variable
         self.camera = False
@@ -259,6 +269,94 @@ class WaterDropMethod:
             text='Number of drops registered: ' + str(0)
         )
         self.measured_drops_label.pack(pady=(50, 5))
+
+#Setup the drop energy tab
+    def setup_drop_energy_tab(self):
+        # Create a frame for controls
+        drop_energy_controls_frame = ttk.Frame(self.drop_energy_frame)
+        drop_energy_controls_frame.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
+
+        # Add label and input for Drop weight
+        drops_weight_label = ttk.Label(
+            drop_energy_controls_frame,
+            text='Drop weight (mg)'
+        )
+        drops_weight_label.pack(pady=(0, 5))
+
+        self.drops_weight = tk.StringVar(value="20.90395")
+        self.drop_weight_input = ttk.Entry(
+            drop_energy_controls_frame,
+            textvariable=self.drops_weight
+        )
+        self.drop_weight_input.pack(pady=(0, 5), fill=tk.X)
+
+        # Add label and input for Water density
+        water_density_label = ttk.Label(
+            drop_energy_controls_frame,
+            text='Water density (kg)'
+        )
+        water_density_label.pack(pady=(0, 5))
+
+        self.water_density = tk.StringVar(value="1000.0")
+        self.water_density_input = ttk.Entry(
+            drop_energy_controls_frame,
+            textvariable=self.water_density
+        )
+        self.water_density_input.pack(pady=(0, 5), fill=tk.X)
+
+        # Add label and input for Air density
+        air_density_label = ttk.Label(
+            drop_energy_controls_frame,
+            text='Air density (kg)'
+        )
+        air_density_label.pack(pady=(0, 5))
+
+        self.air_density = tk.StringVar(value="1.225")  
+        self.air_density_input = ttk.Entry(
+            drop_energy_controls_frame,
+            textvariable=self.air_density
+        )
+        self.air_density_input.pack(pady=(0, 5), fill=tk.X)
+
+        # Add label and input for Drag coefficient
+        drag_coefficient_label = ttk.Label(
+            drop_energy_controls_frame,
+            text='Drag coefficient'
+        )
+        drag_coefficient_label.pack(pady=(0, 5))
+
+        self.drag_coefficient = tk.StringVar(value="0.5207")  
+        self.drag_coefficient_input = ttk.Entry(
+            drop_energy_controls_frame,
+            textvariable=self.drag_coefficient
+        )
+        self.drag_coefficient_input.pack(pady=(0, 5), fill=tk.X)
+
+        # Add label and input for Drop height
+        drop_height_label = ttk.Label(
+            drop_energy_controls_frame,
+            text='Drop height (cm)'
+        )
+        drop_height_label.pack(pady=(0, 5))
+
+        self.drop_height = tk.StringVar(value="53")  
+        self.drop_height_input = ttk.Entry(
+            drop_energy_controls_frame,
+            textvariable=self.drop_height
+        )
+        self.drop_height_input.pack(pady=(0, 5), fill=tk.X)
+
+        # Add Start simulation button
+        self.start_simulation_button = ttk.Button(
+            drop_energy_controls_frame,
+            text='Start Simulation',
+            command=self.start_simulation
+        )
+        self.start_simulation_button.pack(pady=5)
+
+        # Create a frame for the threshold plot
+        self.simulation_plot_frame = ttk.Frame(self.drop_energy_frame)
+        self.simulation_plot_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 #ENDS THE TABS DEFINITIONS
 
     def start_preview(self, *args):
@@ -596,12 +694,74 @@ class WaterDropMethod:
         #self.start_measurement_button.config(state=tk.NORMAL)
         # Disable the stop button
         self.stop_measurement_button.config(state=tk.DISABLED)
-        
-        
+
     def stop_measurement(self):
         """Stop the measurement."""
         # Set flag to stop the measurement process
         self.measuring = False
+    
+
+    def start_simulation(self):
+        g = 9.81  # Gravitational acceleration (m/s^2)
+        
+        dt = 0.0001 # Time step (s)
+
+        # Set the initial conditions
+        rho_w = float(self.water_density.get())  # Water density (kg/m^3)
+        rho_a = float(self.air_density.get())
+        C_d = float(self.drag_coefficient.get())  # Drag coefficient (dimensionless)
+        distTOT = 0.01 * float(self.drop_height.get())  # Drop height (m)
+        mass = 0.000001 * float(self.drops_weight.get())  # Drop weight (kg)
+        
+        a = np.pi * (3/4 * mass / rho_w / np.pi)**(2/3) # Cross-sectional area of the drop (m^2)
+        
+        ''' --- START OF APPROXIMATE SOLUTION ----'''
+        # Set the simulation parameters        
+        Fg = mass * g * (1- rho_a / rho_w) # Gravitational force reduced by buoyancy force(N)
+        
+        # Initialize arrays to store time, distance, velocity, acceleration, and drag force    
+        time = np.array([0])
+        dist = np.array([0.0])
+        vel = np.array([0.0])
+        nrg = np.array([0.0])
+        accl = np.array([])
+        dragF = np.array([])
+        
+        i = 0
+        while True:
+            dragF = np.append(dragF, -0.5*C_d*rho_a*a*vel[i]**2)
+            accl = np.append(accl, (dragF[i] + Fg)/mass)
+            #print(i, dist[i], vel[i], accl[i], dragF[i])
+            vel = np.append(vel, vel[i] + dt*accl[i])
+            nrg = np.append(nrg, 0.5 * mass * vel[i]**2)
+            dist = np.append(dist, dist[i] + dt*vel[i] + 0.5*accl[i]*dt**2)
+            time = np.append(time, time[i] + dt)
+            if dist[i] > distTOT:
+                # Stop the simulation if the drop has reached the aggregate
+                
+                # Clear any existing plot
+                for widget in self.simulation_plot_frame.winfo_children():
+                    widget.destroy()
+                
+                # Create a new matplotlib figure
+                self.fig = Figure(figsize=(6, 4), dpi=100)
+                self.ax = self.fig.add_subplot(111)
+                
+                # Plot the data
+                self.ax.plot(dist*100, vel, linewidth=1.0) 
+                self.ax.set_title(f"Water Drop Energy = {1000 * (nrg[i] + nrg[i-1]) / 2:.2f} mJ", fontsize=16)
+                self.ax.set_xlabel('Distance (cm)', fontsize=12)
+                self.ax.set_ylabel('Drop velocity (m/s)', fontsize=12)
+                self.ax.grid(True)
+
+                # Create a canvas to display the figure in Tkinter
+                self.canvas = FigureCanvasTkAgg(self.fig, master=self.simulation_plot_frame)
+                self.canvas.draw()
+                self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+                
+                break
+            i += 1
+        ''' --- END OF APPROXIMATE SOLUTION ----'''        
         
         
         
