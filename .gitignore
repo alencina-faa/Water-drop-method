@@ -64,3 +64,4 @@ src/Water_drop_method/embedding_in_tk_sgskip.py
 threshold.txt
 output/app.exe
 output/configuración de la compilación auto-py-to-exe.json
+/output
