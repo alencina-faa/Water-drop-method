@@ -65,3 +65,5 @@ threshold.txt
 output/app.exe
 output/configuración de la compilación auto-py-to-exe.json
 /output
+/estabilidad-venv-32bit
+/output32
