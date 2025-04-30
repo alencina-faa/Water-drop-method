@@ -17,7 +17,7 @@ class CameraOpenCV:
     def set_path_name_save_video(self):
         
         global out
-        out = cv2.VideoWriter(self.path_name_save_video, fourcc, self.fps, (self.width, self.height))    
+        out = cv2.VideoWriter(self.path_name_save_video, fourcc, self.fps, (self.width, self.height))   
                
 
     def start(self, device=None):
@@ -28,6 +28,8 @@ class CameraOpenCV:
         if not cap.isOpened():
             print("Cannot open camera")    
             exit()
+        #Fijo la temperatura de la imagen
+        cap.set(cv2.CAP_PROP_TEMPERATURE,6500)
     
 
     def preview_camera(self, winname=None):

@@ -21,6 +21,9 @@ test_sources = [
 ]
 
 requires = [
+    "pillow",
+    "numpy",
+    "matplotlib",
 ]
 test_requires = [
     "pytest",

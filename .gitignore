@@ -61,3 +61,9 @@ var/
 # Briefcase log files
 logs/
 src/Water_drop_method/embedding_in_tk_sgskip.py
+threshold.txt
+output/app.exe
+output/configuración de la compilación auto-py-to-exe.json
+/output
+/estabilidad-venv-32bit
+/output32
