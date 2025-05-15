@@ -122,7 +122,7 @@ class WaterDropMethod:
             DAC_frame_threshold,
             textvariable=self.DAC_var_threshold,
             values=["Test", "NIUSB6009"],
-            width=5,
+            width=10,
             state="readonly"
         )
         self.DAC_combo_threshold.pack(side=tk.TOP)
@@ -435,25 +435,29 @@ class WaterDropMethod:
         #Set procedure acording to the selected DAC
         if self.DAC_var_threshold.get() == "NIUSB6009":
             
-            # Start the measurement process
-            measurer = dac(device_name="Dev1", channel="ai0", sample_rate=1000, samples_per_channel=10000)
-            measurer.start()
-            
-            i = 0
-            values=[]
-            while i < int(measures):
+            try:
+                # Start the measurement process
+                measurer = dac(device_name="Dev1", channel="ai0", sample_rate=1000, samples_per_channel=10000)
+                measurer.start()
+                
+                i = 0
+                values=[]
+                while i < int(measures):
+                        
+                    value = measurer.measure()
                     
-                value = measurer.measure()
-                
-                values.append([i,value])
-                
-                
-                
-                i += 1
+                    values.append([i,value])
+                    
+                    
+                    
+                    i += 1
 
-            values = np.array(values)
-            measurer.stop()
-            measurer.close()
+                values = np.array(values)
+                measurer.stop()
+                measurer.close()
+            except Exception as e:
+                messagebox.showerror("Error", f"An error occurred while measuring: {e}")
+                return
 
         elif self.DAC_var_threshold.get() == "Test":
             # Start the test process

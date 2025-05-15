@@ -14,7 +14,7 @@ class NIUSB6009:
         # Initialize the task
         self.task = nidaqmx.Task()
         self.task.ai_channels.add_ai_voltage_chan(f"{self.device_name}/{self.channel}")
-        self.task.timing.cfg_samp_clk_timing(sample_rate=self.sample_rate, samps_per_chan=self.samples_per_channel)
+        self.task.timing.cfg_samp_clk_timing(self.sample_rate, samps_per_chan=self.samples_per_channel)
 
     def start(self):
         """Start the task for data acquisition."""
