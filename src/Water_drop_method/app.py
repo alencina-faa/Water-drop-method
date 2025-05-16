@@ -200,7 +200,7 @@ class WaterDropMethod:
             DAC_frame_measure,
             textvariable=self.DAC_var_measure,
             values=["Test", "NIUSB6009"],
-            width=5,
+            width=10,
             state="readonly"
         )
         self.DAC_combo_measure.pack(side=tk.TOP)
@@ -259,7 +259,7 @@ class WaterDropMethod:
         )
         self.stop_measurement_button.pack(pady=5)
 
-        # Create a frame for the threshold plot
+        # Create a frame for the measurement
         measured_drops_frame = ttk.Frame(self.measurement_frame)
         measured_drops_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
@@ -544,6 +544,11 @@ class WaterDropMethod:
         cam.stop
         dac.stop
         dac.close
+        # Stop and close the camera if needed
+        if hasattr(self, 'camera') and self.camera:
+            self.camera.stop
+            self.camera.close_window
+            self.camera = None
 
         # Get the number of drops from the input field
         try:
@@ -585,7 +590,7 @@ class WaterDropMethod:
             self.camera.start(device=selected_device)
 
         self.camera.path_name_save_video = self.nombrevid
-        self.camera.set_path_name_save_video
+        self.camera.set_path_name_save_video()
 
         # Initialize drop counter
         self.current_drops = 0
@@ -599,7 +604,12 @@ class WaterDropMethod:
     def write_initial_frames(self):
         """Write initial frames to the video file in a non-blocking way."""
         if self.frame_count < self.total_frames and hasattr(self, 'camera'):
-            self.camera.take_write_snapshot()
+            try:
+                self.camera.take_write_snapshot()
+            except Exception as e:
+                messagebox.showerror("Error", f"An error occurred during measurement: {e}")
+                self.finish_measurement()
+                return
             self.frame_count += 1
             # Schedule the next frame capture
             self.root.after(50, self.write_initial_frames)  # 50ms delay between frames
@@ -637,24 +647,29 @@ class WaterDropMethod:
 
         else:
             value = self.measurer.measure()
-    
-        # Check if value is below threshold
-        if value < self.threshold:
-            
-            if self.DAC_var_measure.get() != "Test":
-                #Stop the measurer task
-                self.measurer.stop()
+        
+        try:    
+            # Check if value is below threshold
+            if value < self.threshold:
+                
+                if self.DAC_var_measure.get() != "Test":
+                    #Stop the measurer task
+                    self.measurer.stop()
 
-            # Capture and write a frame after a short delay
-            if hasattr(self, 'camera'):
-                # Correctly delay the snapshot by 50ms
-                self.root.after(50, lambda: self.take_snapshot_and_continue())
+                # Capture and write a frame after a short delay
+                if hasattr(self, 'camera'):
+                    # Correctly delay the snapshot by 50ms
+                    self.root.after(50, lambda: self.take_snapshot_and_continue())
+                else:
+                    # If no camera, just continue
+                    self.process_measurement()
             else:
-                # If no camera, just continue
-                self.process_measurement()
-        else:
-            # No drop detected, check again immediately without delay
-            self.process_measurement()
+                # No drop detected, check again immediately without delay
+                self.root.after(1, lambda:self.process_measurement())
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred during measurement: {e}")
+            self.finish_measurement()
+            return
 
     def take_snapshot_and_continue(self):
         """Take a snapshot and then continue processing."""
@@ -682,8 +697,9 @@ class WaterDropMethod:
     
         
         #Stop and close the measurer task
-        #self.measurer.stop()
-        #self.measurer.close()
+        if self.DAC_var_measure.get() == "NIUSB6009": 
+            self.measurer.stop()
+            self.measurer.close()
         
         #Stops all process in cam
         cam.stop()

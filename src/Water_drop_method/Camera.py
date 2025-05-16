@@ -43,8 +43,13 @@ class CameraOpenCV:
     def take_write_snapshot(self):
         if not out:
             self.set_path_name_save_video()
-        ret, frame = cap.read()
-        out.write(frame)
+        try:
+            ret, frame = cap.read()
+            if not ret:
+                raise ValueError("Failed to read frame from camera")
+            out.write(frame)
+        except Exception as e:
+            return e
 
     
     def close_window():
