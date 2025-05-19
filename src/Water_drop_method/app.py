@@ -612,7 +612,7 @@ class WaterDropMethod:
                 return
             self.frame_count += 1
             # Schedule the next frame capture
-            self.root.after(50, self.write_initial_frames)  # 50ms delay between frames
+            self.root.after(1, self.write_initial_frames)  #1ms delay between frames
         else:
             # All initial frames written, show message and start measurement
             messagebox.showinfo("Start measurement", "If drops are ready, press OK to start measurement.")
@@ -659,7 +659,7 @@ class WaterDropMethod:
                 # Capture and write a frame after a short delay
                 if hasattr(self, 'camera'):
                     # Correctly delay the snapshot by 50ms
-                    self.root.after(50, lambda: self.take_snapshot_and_continue())
+                    self.take_snapshot_and_continue()#root.after(1, lambda: self.take_snapshot_and_continue())
                 else:
                     # If no camera, just continue
                     self.process_measurement()
