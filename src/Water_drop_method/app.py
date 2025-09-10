@@ -728,12 +728,12 @@ class WaterDropMethod:
 
         # Set the initial conditions
         rho_w = float(self.water_density.get())  # Water density (kg/m^3)
-        rho_a = float(self.air_density.get())
+        rho_a = float(self.air_density.get()) #Air density (Kg/m^3)
         C_d = float(self.drag_coefficient.get())  # Drag coefficient (dimensionless)
         distTOT = 0.01 * float(self.drop_height.get())  # Drop height (m)
         mass = 0.000001 * float(self.drops_weight.get())  # Drop weight (kg)
         
-        a = np.pi * (3/4 * mass / rho_w / np.pi)**(2/3) # Cross-sectional area of the drop (m^2)
+        a = np.pi * (3/4 * mass / rho_w / np.pi)**(2/3) # Cross-sectional area of the drop (assumed spherical) (m^2)
         
         ''' --- START OF APPROXIMATE SOLUTION ----'''
         # Set the simulation parameters        
