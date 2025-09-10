@@ -48,7 +48,7 @@ class WaterDropMethod:
         self.setup_drop_energy_tab()
         
         # Setup Video processing tab
-        #self.setup_video_proc_tab()
+        self.setup_video_proc_tab()
         
         # Global camera variable
         self.camera = False
@@ -357,8 +357,93 @@ class WaterDropMethod:
         # Create a frame for the threshold plot
         self.simulation_plot_frame = ttk.Frame(self.drop_energy_frame)
         self.simulation_plot_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+
+# Setup the video processing tab
+    def setup_video_proc_tab(self):
+        # Create a frame for video processing controls
+        video_proc_controls_frame = ttk.Frame(self.video_processing_frame)
+        video_proc_controls_frame.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
+
+        # Add Load Videos Folder button
+        self.load_video_button = ttk.Button(
+            video_proc_controls_frame,
+            text='Load Videos Folder',
+            command=self.load_video_folder
+        )
+        self.load_video_button.pack(pady=(0,15))
+        
+
+
+        # Add label, check and input for hole area
+        hole_area_label = ttk.Label(
+            video_proc_controls_frame,
+            text='Hole Area (px^2)'
+        )
+        hole_area_label.pack(pady=(0, 5))
+
+        # Create frame for input and check hole area controls
+        hole_area_frame = ttk.Frame(video_proc_controls_frame)
+        hole_area_frame.pack(pady=(0, 5))
+
+        # Add input for hole area
+        self.hole_area = tk.IntVar(value=4000)  # Use IntVar for numeric input
+        self.hole_area_input = ttk.Entry(
+            hole_area_frame,
+            textvariable=self.hole_area,
+            justify='center',
+            width=8,
+            state='disabled'  # Initially disabled
+        )
+        self.hole_area_input.pack(side=tk.LEFT, pady=(0, 5))
+
+        check_var = tk.IntVar()
+        self.hole_area_check = ttk.Checkbutton(
+            hole_area_frame,
+            text='Use this, or...',
+            command= self.check_action,
+            variable=check_var,  # Use IntVar for checkbox state
+            state='disabled'  # Initially disabled
+        )
+        self.hole_area_check.pack(side=tk.RIGHT, pady=(0, 5))
+
+        #Add label and drop down for Select video to set hole area
+        self.set_hole_area_label = ttk.Label(
+            video_proc_controls_frame,
+            text='Select video to set hole area'
+        )
+        self.set_hole_area_label.pack(pady=(0, 5))
+
+        self.video_selection = tk.StringVar()
+        self.video_selection_dropdown = ttk.Combobox(
+            video_proc_controls_frame,
+            textvariable=self.video_selection,
+            state= 'disabled' # Initially disabled
+        )
+        self.video_selection_dropdown.pack(pady=(0, 5))
+
+        # Enable processing when a video is selected
+        self.video_selection_dropdown.bind(
+            "<<ComboboxSelected>>",
+            lambda event: self.process_videos_button.config(state=tk.NORMAL)
+            )
+
+        # Add process video button
+        self.process_videos_button = ttk.Button(
+            video_proc_controls_frame,
+            text='Process Videos',
+            command=self.process_videos
+        )
+        self.process_videos_button.pack(pady=(0, 5))
+        self.process_videos_button.config(state=tk.DISABLED)  # Initially disabled
+
+
+        # Create a frame for the video processing output
+        self.video_output_frame = ttk.Frame(self.video_processing_frame)
+        self.video_output_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+
 #ENDS THE TABS DEFINITIONS
 
+#Functions for the camera tab
     def start_preview(self, *args):
         """Start the camera preview."""
         # Close any existing resources
@@ -414,7 +499,8 @@ class WaterDropMethod:
             
             # Schedule the next update
             self.root.after(30, self.update_camera_preview)  # ~33 FPS
-    
+
+ #Functions of the threshold tab   
     def set_threshold(self, *args):
         """Start the measurement and display the plot for threshold selection."""
         # Close any existing resources
@@ -529,7 +615,8 @@ class WaterDropMethod:
             f.write(f"{self.threshold_value}\n")
 
             f.close()
-    
+
+#Functions of the measurement tab    
     def save_file_as(self):
         self.nombrevid = fd.asksaveasfilename(defaultextension = 'avi',filetypes=[('Avi Files', '*.avi'), ('All Files', '*.*')])
         if self.nombrevid:
@@ -720,7 +807,7 @@ class WaterDropMethod:
         # Set flag to stop the measurement process
         self.measuring = False
     
-
+#Functions of the drop energy tab
     def start_simulation(self):
         g = 9.81  # Gravitational acceleration (m/s^2)
         
@@ -783,12 +870,46 @@ class WaterDropMethod:
             i += 1
         ''' --- END OF APPROXIMATE SOLUTION ----'''        
         
+#Functions of the video processing tab
+    def load_video_folder(self):
+        """Load a video file and process it."""
+        self.video_folder_path = fd.askdirectory(
+            title="Select Video Folder",
+            mustexist=True
+        )
+        if not self.video_folder_path:
+            return  # User cancelled the file dialog
         
-        
-        
-        
-        
+        # Get all video files in the selected folder
+        self.video_files = [f for f in os.listdir(self.video_folder_path) if f.endswith(('.mp4', '.avi', '.mov'))]
+        if not self.video_files:
+            messagebox.showerror("Error", "No video files found in the selected folder.")
+            return
+        self.video_selection_dropdown['values'] = self.video_files
+        self.hole_area_check.config(state='normal')  # Enable the checkbox
+        self.hole_area_input.config(state='normal')  # Enable the input field
 
+    def check_action(self):
+        """Enable or disable the video selection dropdown based on the checkbox state."""
+        if self.hole_area_check.instate(['selected']):
+            self.video_selection_dropdown.config(state='disabled')
+            self.process_videos_button.config(state=tk.NORMAL)
+        else:
+            self.video_selection_dropdown.config(state='readonly')
+            self.process_videos_button.config(state=tk.DISABLED)        
+
+    def process_videos(self):
+        """Process the loaded video files."""
+        import cv2
+        for video_file in self.video_files:
+            cap = cv2.VideoCapture(os.path.join(self.video_folder_path, video_file))
+            # Process each video file as needed
+            while cap.isOpened():
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                # Perform video processing on the frame
+            cap.release()
 
 if __name__ == "__main__":
     root = tk.Tk()
