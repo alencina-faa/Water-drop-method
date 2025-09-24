@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import os
+import cv2
+import math
 
 
 class WaterDropMethod:
@@ -55,6 +57,13 @@ class WaterDropMethod:
         
         # Variable to store threshold value
         self.threshold_value = None
+
+        # Canvas to display the image and draw the hole area
+        self.canvas_hole_area = None
+        self.selected_image_hole_area = None
+
+        # Frame display the video video for hole area selection
+        self.video_label_hole_area = None
 #Ends the mainwindow definitions
 
 #STARTS THE TABS DEFINITIONS
@@ -899,17 +908,211 @@ class WaterDropMethod:
             self.process_videos_button.config(state=tk.DISABLED)        
 
     def process_videos(self):
-        """Process the loaded video files."""
-        import cv2
-        for video_file in self.video_files:
-            cap = cv2.VideoCapture(os.path.join(self.video_folder_path, video_file))
-            # Process each video file as needed
-            while cap.isOpened():
-                ret, frame = cap.read()
-                if not ret:
-                    break
-                # Perform video processing on the frame
-            cap.release()
+        """
+        Process the selected video to set the hole area
+        """     
+        if self.canvas_hole_area:
+            self.canvas_hole_area.pack_forget()
+            self.canvas_hole_area = None
+        if self.video_label_hole_area:
+            self.video_label_hole_area.pack_forget()
+            self.video_label_hole_area = None
+            self.slider.pack_forget()
+            self.confirm_button.pack_forget()
+
+        # Load video
+        self.cap = cv2.VideoCapture(self.video_folder_path + '/' + self.video_selection.get())
+        self.total_frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        self.current_frame_idx = 0
+
+        # Frame display the video video for hole area selection
+        self.video_label_hole_area = tk.Label(self.video_output_frame)
+        self.video_label_hole_area.pack()
+
+        # Slider to navigate between frames
+        self.slider = ttk.Scale(
+            self.video_output_frame,
+            from_=0,
+            to=self.total_frames - 1,
+            orient="horizontal",
+            command=self.on_slider_move,
+            length=400
+        )
+        self.slider.pack(pady=10)
+
+        # Confirmation button
+        self.confirm_button = tk.Button(
+            self.video_output_frame, 
+            text="Confirm", 
+            command=self.confirm_frame_for_hole_area_selection
+        )
+        self.confirm_button.pack(pady=5)
+
+
+
+        # Show the first frame
+        self.show_frame(0)
+
+        
+
+        
+        
+
+        
+
+
+
+    def on_slider_move(self, val):
+        """When the slider is moved, show the corresponding frame"""
+        frame_idx = int(float(val))
+        self.current_frame_idx = frame_idx
+        self.show_frame(frame_idx)
+
+    def show_frame(self, frame_idx):
+        """Show a frame in the label"""
+        img = self.get_frame(frame_idx)
+        if img is None:
+            return
+        self.selected_image_hole_area = img
+        imgtk = ImageTk.PhotoImage(image=img)
+        self.video_label_hole_area.imgtk = imgtk
+        self.video_label_hole_area.configure(image=imgtk)
+
+    def get_frame(self, frame_idx):
+        """Return the frame at position frame_idx"""
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
+        ret, frame = self.cap.read()
+        if not ret:
+            return None
+        # Transform from BGR (OpenCV) to RGB (PIL)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        return Image.fromarray(frame)
+
+    def confirm_frame_for_hole_area_selection(self):
+        """Finalize the frame and pass to canvas"""
+        # Hide video and slider widgets
+        self.video_label_hole_area.pack_forget()
+        self.slider.pack_forget()
+        self.confirm_button.pack_forget()
+
+        # Create canvas
+        self.canvas_hole_area = tk.Canvas(self.video_output_frame, 
+                                width=self.selected_image_hole_area.width, 
+                                height=self.selected_image_hole_area.height
+                                )
+        self.canvas_hole_area.pack()
+
+        # Show the image as background
+        self.bg_image = ImageTk.PhotoImage(self.selected_image_hole_area)
+        self.canvas_hole_area.create_image(0, 0, anchor="nw", image=self.bg_image)
+
+        # Elipse confirmation button
+        self.btn_elipse_confirmation = tk.Button(self.video_output_frame, text="Confirmar elipse", command=self.confirm_ellipse)
+        self.btn_elipse_confirmation.pack(pady=10)
+
+        self.draw_ellipse_on_hole()
+
+
+    def draw_ellipse_on_hole(self):
+        """Allow the user to draw an ellipse on the canvas to select the hole area"""
+        # Ellipse parameters
+        self.center = [self.bg_image.width() / 2, self.bg_image.height() / 2]
+        self.rx, self.ry = 100, 60
+        self.angle = 0
+        self.ellipse = None
+
+        # Interaction flags
+        self.dragging_center = False
+        self.rotating = False
+        self.resizing_x = False
+        self.resizing_y = False
+
+        # Draw initial ellipse
+        self.draw_ellipse()
+
+        # Bind mouse events
+        self.canvas_hole_area.bind("<Button-1>", self.on_click)
+        self.canvas_hole_area.bind("<B1-Motion>", self.on_drag)
+        self.canvas_hole_area.bind("<ButtonRelease-1>", self.on_release)
+
+    def draw_ellipse(self):
+        """Draw rotated ellipse as polygon on top of image."""
+        if self.ellipse:
+            self.canvas_hole_area.delete(self.ellipse)
+
+        points = []
+        for t in range(0, 360, 3):  # step = resolution
+            x = self.rx * math.cos(math.radians(t))
+            y = self.ry * math.sin(math.radians(t))
+
+            # apply rotation
+            xr = x * math.cos(math.radians(self.angle)) - y * math.sin(math.radians(self.angle))
+            yr = x * math.sin(math.radians(self.angle)) + y * math.cos(math.radians(self.angle))
+
+            points.extend((self.center[0] + xr, self.center[1] + yr))
+
+        self.ellipse = self.canvas_hole_area.create_polygon(points, outline="red", fill="", width=2)
+
+    def on_click(self, event):
+        dx, dy = event.x - self.center[0], event.y - self.center[1]
+        dist_center = math.hypot(dx, dy)
+
+        if dist_center < 15:
+            self.dragging_center = True
+        else:
+            # Rightmost point (rotation handle)
+            edge_x = self.center[0] + self.rx * math.cos(math.radians(self.angle))
+            edge_y = self.center[1] + self.rx * math.sin(math.radians(self.angle))
+            if abs(event.x - edge_x) < 15 and abs(event.y - edge_y) < 15:
+                self.rotating = True
+            # Bottom point (resize Y)
+            elif abs(event.x - (self.center[0] - self.ry * math.cos(math.radians(self.angle-90)))) < 15 and \
+                    abs(event.y - (self.center[1] - self.ry * math.sin(math.radians(self.angle-90)))) < 15:
+                self.resizing_y = True
+            # Left edge (resize X)
+            elif abs(event.x - (self.center[0] - self.rx * math.cos(math.radians(self.angle)))) < 15 and \
+                    abs(event.y - (self.center[1] - self.rx * math.sin(math.radians(self.angle)))) < 15:
+                self.resizing_x = True
+
+    def on_drag(self, event):
+        if self.dragging_center:
+            self.center = [event.x, event.y]
+        elif self.rotating:
+            dx, dy = event.x - self.center[0], event.y - self.center[1]
+            self.angle = math.degrees(math.atan2(dy, dx))
+        elif self.resizing_x:
+            self.rx = abs(event.x - self.center[0])
+        elif self.resizing_y:
+            self.ry = abs(event.y - self.center[1])
+
+        self.draw_ellipse()
+
+    def on_release(self, event):
+        self.dragging_center = False
+        self.rotating = False
+        self.resizing_x = False
+        self.resizing_y = False
+
+    def confirm_ellipse(self):
+        """Evaluates the area of the ellipse and saves it to the input field."""
+        self.hole_area.set(round(math.pi * self.rx * self.ry))
+        
+        self.canvas_hole_area.pack_forget()
+        self.canvas_hole_area = None
+        self.btn_elipse_confirmation.pack_forget()
+        self.btn_elipse_confirmation = None
+
+        # """Process the loaded video files."""
+        # import cv2
+        # for video_file in self.video_files:
+        #     cap = cv2.VideoCapture(os.path.join(self.video_folder_path, video_file))
+        #     # Process each video file as needed
+        #     while cap.isOpened():
+        #         ret, frame = cap.read()
+        #         if not ret:
+        #             break
+        #         # Perform video processing on the frame
+        #     cap.release()
 
 if __name__ == "__main__":
     root = tk.Tk()
