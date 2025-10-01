@@ -64,6 +64,10 @@ class WaterDropMethod:
 
         # Frame display the video video for hole area selection
         self.video_label_hole_area = None
+
+        # Widgets created dynamically in Video Processing tab
+        self.slider = None
+        self.hole_area_confirm_button = None
 #Ends the mainwindow definitions
 
 #STARTS THE TABS DEFINITIONS
@@ -162,13 +166,14 @@ class WaterDropMethod:
         self.confirm_frame = ttk.Frame(threshold_controls_frame)
         self.confirm_frame.pack(pady=5, fill=tk.X)
         
-        self.confirm_button = ttk.Button(
+        # Use a dedicated name to avoid conflicts with other tabs
+        self.threshold_confirm_button = ttk.Button(
             self.confirm_frame,
             text='Confirm Threshold',
             command=self.confirm_threshold,
             state=tk.DISABLED
         )
-        self.confirm_button.pack(side=tk.LEFT, padx=2)
+        self.threshold_confirm_button.pack(side=tk.LEFT, padx=2)
         
         # Create a frame for the threshold plot
         self.threshold_plot_frame = ttk.Frame(self.threshold_frame)
@@ -394,8 +399,9 @@ class WaterDropMethod:
         hole_area_frame = ttk.Frame(video_proc_controls_frame)
         hole_area_frame.pack(pady=(0, 5))
 
-        # Add input for hole area
-        self.hole_area = tk.IntVar(value=4000)  # Use IntVar for numeric input
+        # Add input for hole area (load saved default if available)
+        default_hole_area = self.load_hole_area_default() or 4000
+        self.hole_area = tk.IntVar(value=default_hole_area)  # Use IntVar for numeric input
         self.hole_area_input = ttk.Entry(
             hole_area_frame,
             textvariable=self.hole_area,
@@ -585,7 +591,7 @@ class WaterDropMethod:
         self.canvas.mpl_connect('button_press_event', self.on_plot_click)
         
         # Disable the confirm button initially
-        self.confirm_button.config(state=tk.DISABLED)
+        self.threshold_confirm_button.config(state=tk.DISABLED)
     
     def on_plot_click(self, event):
         """Handle click events on the plot."""
@@ -607,15 +613,15 @@ class WaterDropMethod:
             self.canvas.draw()
             
             # Enable the confirm button
-            self.confirm_button.config(state=tk.NORMAL)
+            self.threshold_confirm_button.config(state=tk.NORMAL)
     
     def confirm_threshold(self):
         """Confirm the selected threshold."""
         if self.threshold_value is not None:
             messagebox.showinfo("Threshold Confirmed", f"Threshold value {self.threshold_value:.4f} has been set.")
             
-            # Disable the buttons
-            self.confirm_button.config(state=tk.DISABLED)
+            # Disable the threshold confirm button
+            self.threshold_confirm_button.config(state=tk.DISABLED)
             
             # Here you would typically store the threshold for later use
             # or proceed to the next step in your application
@@ -911,14 +917,25 @@ class WaterDropMethod:
         """
         Process the selected video to set the hole area
         """     
+        # If the user opted to use the typed-in hole area directly, start batch processing
+        if self.hole_area_check.instate(['selected']):
+            # Clear right panel
+            for w in self.video_output_frame.winfo_children():
+                w.destroy()
+            self.start_processing_all_videos()
+            return
+
         if self.canvas_hole_area:
             self.canvas_hole_area.pack_forget()
             self.canvas_hole_area = None
         if self.video_label_hole_area:
             self.video_label_hole_area.pack_forget()
             self.video_label_hole_area = None
-            self.slider.pack_forget()
-            self.confirm_button.pack_forget()
+            if hasattr(self, 'slider') and self.slider:
+                self.slider.pack_forget()
+            # Only hide the video processing confirm if it exists
+            if hasattr(self, 'hole_area_confirm_button') and self.hole_area_confirm_button:
+                self.hole_area_confirm_button.pack_forget()
 
         # Load video
         self.cap = cv2.VideoCapture(self.video_folder_path + '/' + self.video_selection.get())
@@ -940,13 +957,13 @@ class WaterDropMethod:
         )
         self.slider.pack(pady=10)
 
-        # Confirmation button
-        self.confirm_button = tk.Button(
+        # Confirmation button for selecting frame (distinct from threshold confirm)
+        self.hole_area_confirm_button = tk.Button(
             self.video_output_frame, 
             text="Confirm", 
             command=self.confirm_frame_for_hole_area_selection
         )
-        self.confirm_button.pack(pady=5)
+        self.hole_area_confirm_button.pack(pady=5)
 
 
 
@@ -993,7 +1010,8 @@ class WaterDropMethod:
         # Hide video and slider widgets
         self.video_label_hole_area.pack_forget()
         self.slider.pack_forget()
-        self.confirm_button.pack_forget()
+        if hasattr(self, 'hole_area_confirm_button') and self.hole_area_confirm_button:
+            self.hole_area_confirm_button.pack_forget()
 
         # Create canvas
         self.canvas_hole_area = tk.Canvas(self.video_output_frame, 
@@ -1096,25 +1114,235 @@ class WaterDropMethod:
     def confirm_ellipse(self):
         """Evaluates the area of the ellipse and saves it to the input field."""
         self.hole_area.set(round(math.pi * self.rx * self.ry))
+        # Persist the selected hole area for future runs
+        try:
+            self.save_hole_area(self.hole_area.get())
+        except Exception as e:
+            # Non-fatal: keep going even if persistence fails
+            messagebox.showwarning("Warning", f"Couldn't save hole area: {e}")
         
         self.canvas_hole_area.pack_forget()
         self.canvas_hole_area = None
         self.btn_elipse_confirmation.pack_forget()
         self.btn_elipse_confirmation = None
 
-        # """Process the loaded video files."""
-        # import cv2
-        # for video_file in self.video_files:
-        #     cap = cv2.VideoCapture(os.path.join(self.video_folder_path, video_file))
-        #     # Process each video file as needed
-        #     while cap.isOpened():
-        #         ret, frame = cap.read()
-        #         if not ret:
-        #             break
-        #         # Perform video processing on the frame
-        #     cap.release()
+        # Clear the panel and start processing all videos
+        for w in self.video_output_frame.winfo_children():
+            w.destroy()
+        self.start_processing_all_videos()
 
-if __name__ == "__main__":
+    # -------------------- Batch Video Processing --------------------
+    def start_processing_all_videos(self):
+        """Process all videos in folder, save processed videos and a combined results table, and plot incrementally."""
+        if not getattr(self, 'video_folder_path', None):
+            messagebox.showerror("Error", "Please load a video folder first.")
+            return
+        if not getattr(self, 'video_files', None):
+            messagebox.showerror("Error", "No videos found to process.")
+            return
+
+        # Output folder with suffix _PROC
+        out_folder = self.video_folder_path + "_PROC"
+        try:
+            os.makedirs(out_folder, exist_ok=True)
+        except Exception as e:
+            messagebox.showerror("Error", f"Cannot create output folder: {e}")
+            return
+
+        # Prepare Matplotlib area in the right panel
+        self.proc_fig = Figure(figsize=(6, 4), dpi=100)
+        self.proc_ax = self.proc_fig.add_subplot(111)
+        self.proc_ax.set_title("Normalizado vs Número de imagen")
+        self.proc_ax.set_xlabel("Número de imagen")
+        self.proc_ax.set_ylabel("Normalizado")
+        self.proc_ax.grid(True)
+        self.proc_canvas = FigureCanvasTkAgg(self.proc_fig, master=self.video_output_frame)
+        self.proc_canvas.draw()
+        self.proc_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+
+        results = {}  # video_name -> normalized list
+        Agu = int(self.hole_area.get()) if hasattr(self, 'hole_area') else 4000
+
+        for video_file in self.video_files:
+            video_path = os.path.join(self.video_folder_path, video_file)
+            try:
+                name, areas = self._process_single_video(video_path, out_folder)
+            except Exception as e:
+                messagebox.showwarning("Warning", f"Error processing {video_file}: {e}")
+                continue
+
+            if not areas:
+                continue
+
+            normalized = self._compute_normalized_series(areas, Agu, window=5)
+            results[name] = normalized
+
+            # Update plot incrementally
+            x = list(range(1, 1 + len(normalized)))
+            self.proc_ax.plot(x, normalized, label=name, linewidth=1.0)
+            self.proc_ax.legend()
+            self.proc_canvas.draw()
+            self.root.update_idletasks()
+
+        # Write results table
+        try:
+            self._write_results_table(results, out_folder)
+        except Exception as e:
+            messagebox.showwarning("Warning", f"Couldn't write results table: {e}")
+
+        messagebox.showinfo("Done", f"Processed {len(results)} videos. Output folder:\n{out_folder}")
+
+    def _process_single_video(self, video_path: str, out_folder: str):
+        """Return (base_name, areas) and write processed video to out_folder."""
+        cap = cv2.VideoCapture(video_path)
+        if not cap.isOpened():
+            raise RuntimeError("Cannot open video")
+
+        # Read up to frame 21
+        frame = None
+        for _ in range(21):
+            ret, frame = cap.read()
+            if not ret:
+                cap.release()
+                raise RuntimeError("Couldn't read initial frames up to 21")
+
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        _, thresh = cv2.threshold(gray, 40, 255, cv2.THRESH_BINARY_INV)
+        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if not contours:
+            cap.release()
+            raise RuntimeError("No contours found in initial frame")
+        max_contour = max(contours, key=cv2.contourArea)
+        x1, y1, w1, h1 = cv2.boundingRect(max_contour)
+        x1, y1 = max(x1 - 20, 0), max(y1 - 20, 0)
+        w1 = min(w1 + 40, frame.shape[1] - x1)
+        h1 = min(h1 + 40, frame.shape[0] - y1)
+        max_area = cv2.contourArea(max_contour)
+
+        base = os.path.splitext(os.path.basename(video_path))[0]
+        out_path = os.path.join(out_folder, f"{base}_PROC.avi")
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        out = cv2.VideoWriter(out_path, fourcc, 1.0, (w1, h1))
+
+        areas = []
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            frame_rec = frame[y1:y1 + h1, x1:x1 + w1]
+            gray_rec = cv2.cvtColor(frame_rec, cv2.COLOR_BGR2GRAY)
+            _, thr = cv2.threshold(gray_rec, 40, 255, cv2.THRESH_BINARY_INV)
+            ctrs, _ = cv2.findContours(thr, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            if ctrs:
+                cmax = max(ctrs, key=cv2.contourArea)
+                area = cv2.contourArea(cmax)
+                if area > max_area:
+                    area = max_area
+                frame_draw = cv2.drawContours(frame_rec.copy(), [cmax], -1, (0, 255, 0), 2)
+            else:
+                area = 0.0
+                frame_draw = frame_rec
+            areas.append(float(area))
+            out.write(frame_draw)
+
+        cap.release()
+        out.release()
+        cv2.destroyAllWindows()
+        return base, areas
+
+    def _compute_normalized_series(self, areas, Agu: float, window: int = 5):
+        if not areas:
+            return []
+        denom = (areas[0] - Agu)
+        if abs(denom) <= 1e-12:
+            denom = 1.0
+        arr = np.array(areas, dtype=float)
+        n = len(arr)
+        rolling = [float('nan')] * n
+        for i in range(n):
+            if i + 1 < window:
+                continue
+            start = i + 1 - window
+            rolling[i] = float(np.mean(arr[start:i+1]))
+        normalized = []
+        for v in rolling:
+            if isinstance(v, float) and not np.isnan(v):
+                normalized.append((v - Agu) / denom)
+            else:
+                normalized.append(float('nan'))
+        return normalized
+
+    def _write_results_table(self, results: dict, out_folder: str):
+        # Determine max length across series
+        max_len = max((len(v) for v in results.values()), default=0)
+        headers = ["Número de imagen"] + list(results.keys())
+        rows = []
+        for i in range(max_len):
+            row = [i + 1]
+            for name in results.keys():
+                series = results[name]
+                row.append(series[i] if i < len(series) else '')
+            rows.append(row)
+
+        # Prefer Excel via pandas if available (lazy import)
+        try:
+            import pandas as pd  # type: ignore
+            data = {"Número de imagen": [r[0] for r in rows]}
+            for idx, name in enumerate(results.keys()):
+                data[name] = [r[idx + 1] for r in rows]
+            df = pd.DataFrame(data)
+            excel_path = os.path.join(out_folder, "resultados_PROC.xlsx")
+            df.to_excel(excel_path, index=False)
+            return
+        except Exception:
+            pass
+
+        # Fallback to CSV if pandas missing or write failed
+        import csv
+        csv_path = os.path.join(out_folder, "resultados_PROC.csv")
+        with open(csv_path, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(headers)
+            writer.writerows(rows)
+
+    
+
+    # ---- Persistence helpers for hole area ----
+    def load_hole_area_default(self):
+        """Return saved hole area from hole_area.txt if available, else None."""
+        try:
+            with open("hole_area.txt", "r") as f:
+                line = f.readline().strip()
+                # Accept int or float in file, but store as int
+                val = int(float(line))
+                if val > 0:
+                    return val
+        except FileNotFoundError:
+            return None
+        except Exception:
+            return None
+        return None
+
+    def save_hole_area(self, value: int):
+        """Persist hole area to hole_area.txt in the working directory."""
+        with open("hole_area.txt", "w") as f:
+            f.write(f"{int(value)}\n")
+
+def main():
+    """Create and return a launcher with a main_loop() to run the GUI."""
     root = tk.Tk()
     app = WaterDropMethod(root)
-    root.mainloop()
+
+    class _Launcher:
+        def __init__(self, root_ref, app_ref):
+            self._root = root_ref
+            self._app = app_ref  # keep a reference to prevent GC
+
+        def main_loop(self):
+            self._root.mainloop()
+
+    return _Launcher(root, app)
+
+
+if __name__ == "__main__":
+    main().main_loop()

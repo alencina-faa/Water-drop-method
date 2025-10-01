@@ -68,3 +68,4 @@ output/configuración de la compilación auto-py-to-exe.json
 /estabilidad-venv-32bit
 /output32
 debug.log
+src/Water_drop_method/procesa_1_video.py
