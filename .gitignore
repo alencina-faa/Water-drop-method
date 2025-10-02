@@ -64,8 +64,13 @@ src/Water_drop_method/embedding_in_tk_sgskip.py
 threshold.txt
 output/app.exe
 output/configuración de la compilación auto-py-to-exe.json
-/output
 /estabilidad-venv-32bit
 /output32
 debug.log
 src/Water_drop_method/procesa_1_video.py
+output/hole_area.txt
+output/WDM.exe
+output/WDM_configuración auto-py-to-exe.json
+output/WDM_configuración_Inno compiler.iss
+output/WDM_installer.exe
+output/WDM_installer_0.0.9.exe
