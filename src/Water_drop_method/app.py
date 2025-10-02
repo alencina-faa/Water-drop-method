@@ -11,6 +11,7 @@ from matplotlib.figure import Figure
 import os
 import cv2
 import math
+import statistics
 
 
 class WaterDropMethod:
@@ -1140,30 +1141,55 @@ class WaterDropMethod:
         if not getattr(self, 'video_files', None):
             messagebox.showerror("Error", "No videos found to process.")
             return
+        # Disable process button to avoid re-entry
+        try:
+            self.process_videos_button.config(state=tk.DISABLED)
+        except Exception:
+            pass
 
-        # Output folder with suffix _PROC
-        out_folder = self.video_folder_path + "_PROC"
+        # Output folder INSIDE selected folder: <selected_basename>_PROC
+        base_folder_name = os.path.basename(os.path.normpath(self.video_folder_path))
+        out_folder = os.path.join(self.video_folder_path, f"{base_folder_name}_PROC")
         try:
             os.makedirs(out_folder, exist_ok=True)
         except Exception as e:
             messagebox.showerror("Error", f"Cannot create output folder: {e}")
+            try:
+                self.process_videos_button.config(state=tk.NORMAL)
+            except Exception:
+                pass
             return
-
         # Prepare Matplotlib area in the right panel
+        for w in self.video_output_frame.winfo_children():
+            w.destroy()
         self.proc_fig = Figure(figsize=(6, 4), dpi=100)
         self.proc_ax = self.proc_fig.add_subplot(111)
-        self.proc_ax.set_title("Normalizado vs Número de imagen")
-        self.proc_ax.set_xlabel("Número de imagen")
-        self.proc_ax.set_ylabel("Normalizado")
+        # No title (requested)
+        self.proc_ax.set_xlabel("Image number")
+        self.proc_ax.set_ylabel("Normalized area")
+        self.proc_ax.set_ylim(-0.1, 1.1)
         self.proc_ax.grid(True)
         self.proc_canvas = FigureCanvasTkAgg(self.proc_fig, master=self.video_output_frame)
         self.proc_canvas.draw()
         self.proc_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
-        results = {}  # video_name -> normalized list
+        # Progress bar
+        self.progress_var = tk.DoubleVar(value=0)
+        self.progress_bar = ttk.Progressbar(self.video_output_frame, variable=self.progress_var, maximum=len(self.video_files))
+        self.progress_bar.pack(fill=tk.X, padx=5, pady=5)
+
+        # Cancel button
+        self.cancel_processing = False
+        self.cancel_button = ttk.Button(self.video_output_frame, text='Cancel', command=self.cancel_video_processing)
+        self.cancel_button.pack(padx=5, pady=(0,5))
+
+        results = {}  # video_name -> normalized list (without initial NaNs)
+        rupture_points = {}  # video_name -> image number where normalized < 0 (or last)
         Agu = int(self.hole_area.get()) if hasattr(self, 'hole_area') else 4000
 
-        for video_file in self.video_files:
+        for idx, video_file in enumerate(self.video_files, start=1):
+            if self.cancel_processing:
+                break
             video_path = os.path.join(self.video_folder_path, video_file)
             try:
                 name, areas = self._process_single_video(video_path, out_folder)
@@ -1174,23 +1200,65 @@ class WaterDropMethod:
             if not areas:
                 continue
 
-            normalized = self._compute_normalized_series(areas, Agu, window=5)
+            image_numbers, normalized = self._compute_normalized_series(areas, Agu, window=5)
             results[name] = normalized
 
-            # Update plot incrementally
-            x = list(range(1, 1 + len(normalized)))
-            self.proc_ax.plot(x, normalized, label=name, linewidth=1.0)
-            self.proc_ax.legend()
+            # Determine rupture point (first image where normalized < 0, else last)
+            rupture_idx = None
+            for i, val in enumerate(normalized):
+                if isinstance(val, float) and not np.isnan(val) and val < 0:
+                    rupture_idx = image_numbers[i]
+                    break
+            if rupture_idx is None:
+                rupture_idx = image_numbers[-1] if image_numbers else 0
+            rupture_points[name] = rupture_idx
+
+            # Update plot incrementally (skip NaNs already removed)
+            self.proc_ax.plot(image_numbers, normalized, label=name, linewidth=1.0)
+            # Legend outside plot, smaller font
+            self.proc_ax.legend(loc='center left', bbox_to_anchor=(1.02, 0.5), fontsize=8, frameon=False)
             self.proc_canvas.draw()
             self.root.update_idletasks()
+            # Update progress
+            self.progress_var.set(idx)
+            self.progress_bar.update()
 
-        # Write results table
+        processed_videos = len(results)
+
+        rupture_median = None
+        if processed_videos > 0:
+            try:
+                rupture_median = statistics.median(rupture_points.values())
+            except Exception:
+                rupture_median = None
+
+        # Add vertical line for Rupture if available
+        if rupture_median is not None and processed_videos > 0:
+            self.proc_ax.axvline(rupture_median, color='black', linestyle='--', label='Rupture')
+            self.proc_ax.legend(loc='center left', bbox_to_anchor=(1.02, 0.5), fontsize=8, frameon=False)
+            self.proc_canvas.draw()
+
+        # Write results table (with rupture)
         try:
-            self._write_results_table(results, out_folder)
+            self._write_results_table(results, out_folder, rupture_median, os.path.basename(os.path.normpath(self.video_folder_path)))
         except Exception as e:
             messagebox.showwarning("Warning", f"Couldn't write results table: {e}")
 
-        messagebox.showinfo("Done", f"Processed {len(results)} videos. Output folder:\n{out_folder}")
+        if self.cancel_processing:
+            messagebox.showinfo("Canceled", f"Processing canceled after {processed_videos} videos. Output folder:\n{out_folder}")
+        else:
+            messagebox.showinfo("Done", f"Processed {processed_videos} videos. Output folder:\n{out_folder}")
+
+        # Re-enable process button
+        try:
+            self.process_videos_button.config(state=tk.NORMAL)
+        except Exception:
+            pass
+        # Remove cancel button
+        try:
+            self.cancel_button.config(state=tk.DISABLED)
+        except Exception:
+            pass
 
     def _process_single_video(self, video_path: str, out_folder: str):
         """Return (base_name, areas) and write processed video to out_folder."""
@@ -1251,31 +1319,34 @@ class WaterDropMethod:
         return base, areas
 
     def _compute_normalized_series(self, areas, Agu: float, window: int = 5):
+        """Return (image_numbers, normalized_values) without initial NaNs; first value forced to 1.
+        Uses rolling mean over 'window' frames; denominator = first rolling mean - Agu.
+        """
         if not areas:
-            return []
-        denom = (areas[0] - Agu)
-        if abs(denom) <= 1e-12:
-            denom = 1.0
+            return [], []
         arr = np.array(areas, dtype=float)
         n = len(arr)
-        rolling = [float('nan')] * n
-        for i in range(n):
-            if i + 1 < window:
-                continue
-            start = i + 1 - window
-            rolling[i] = float(np.mean(arr[start:i+1]))
-        normalized = []
-        for v in rolling:
-            if isinstance(v, float) and not np.isnan(v):
-                normalized.append((v - Agu) / denom)
-            else:
-                normalized.append(float('nan'))
-        return normalized
+        rolling_vals = []
+        image_numbers = []  # Start numbering at 1 for first valid rolling mean
+        for i in range(window - 1, n):  # start at first index with full window
+            window_slice = arr[i - window + 1: i + 1]
+            rolling_vals.append(float(np.mean(window_slice)))
+            image_numbers.append(len(rolling_vals))  # sequential numbering starting at 1
+        if not rolling_vals:
+            return [], []
+        first_mean = rolling_vals[0]
+        denom = first_mean - Agu
+        if abs(denom) <= 1e-12:
+            denom = 1.0
+        normalized = [(v - Agu) / denom for v in rolling_vals]
+        # Force first value to 1 exactly
+        normalized[0] = 1.0
+        return image_numbers, normalized
 
-    def _write_results_table(self, results: dict, out_folder: str):
+    def _write_results_table(self, results: dict, out_folder: str, rupture_median, folder_basename: str):
         # Determine max length across series
         max_len = max((len(v) for v in results.values()), default=0)
-        headers = ["Número de imagen"] + list(results.keys())
+        headers = ["Image number"] + list(results.keys())
         rows = []
         for i in range(max_len):
             row = [i + 1]
@@ -1287,23 +1358,69 @@ class WaterDropMethod:
         # Prefer Excel via pandas if available (lazy import)
         try:
             import pandas as pd  # type: ignore
-            data = {"Número de imagen": [r[0] for r in rows]}
+            # Decide engine explicitly to avoid ambiguity
+            try:
+                import openpyxl  # type: ignore  # noqa: F401
+                excel_engine = "openpyxl"
+            except ImportError:
+                try:
+                    import xlsxwriter  # type: ignore  # noqa: F401
+                    excel_engine = "xlsxwriter"
+                except ImportError:
+                    raise RuntimeError(
+                        "Excel export requires 'openpyxl' or 'xlsxwriter'. Install with 'pip install openpyxl'."
+                    )
+
+            data = {"Image number": [r[0] for r in rows]}
             for idx, name in enumerate(results.keys()):
                 data[name] = [r[idx + 1] for r in rows]
             df = pd.DataFrame(data)
-            excel_path = os.path.join(out_folder, "resultados_PROC.xlsx")
-            df.to_excel(excel_path, index=False)
-            return
-        except Exception:
-            pass
+            excel_path = os.path.join(out_folder, "Results_PROC.xlsx")
+            try:
+                with pd.ExcelWriter(excel_path, engine=excel_engine) as writer:
+                    df.to_excel(writer, sheet_name="Results_PROC", index=False)
+                    rupture_df = pd.DataFrame([[folder_basename, rupture_median if rupture_median is not None else ""]])
+                    rupture_df.to_excel(writer, sheet_name="Rupture", index=False, header=False)
+                return
+            except Exception as e:
+                # Surface Excel-specific failure then fall back to CSV
+                try:
+                    from tkinter import messagebox
+                    messagebox.showwarning(
+                        "Excel export failed",
+                        f"Could not create Excel file (will create CSV instead):\n{e}"
+                    )
+                except Exception:
+                    pass
+        except Exception as e:
+            # Show warning if pandas or engine not available
+            try:
+                from tkinter import messagebox
+                messagebox.showwarning(
+                    "Excel export unavailable",
+                    f"Pandas/engine not available (will create CSV instead):\n{e}"
+                )
+            except Exception:
+                pass
 
         # Fallback to CSV if pandas missing or write failed
         import csv
-        csv_path = os.path.join(out_folder, "resultados_PROC.csv")
+        csv_path = os.path.join(out_folder, "Results_PROC.csv")
         with open(csv_path, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
             writer.writerow(headers)
             writer.writerows(rows)
+        # Rupture info
+        if rupture_median is not None:
+            with open(os.path.join(out_folder, "Results_PROC_Rupture.txt"), 'w', encoding='utf-8') as rf:
+                rf.write(f"{folder_basename},{rupture_median}\n")
+
+    def cancel_video_processing(self):
+        self.cancel_processing = True
+        try:
+            self.cancel_button.config(state=tk.DISABLED)
+        except Exception:
+            pass
 
     
 
