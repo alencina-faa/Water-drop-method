@@ -74,3 +74,4 @@ output/WDM_configuración auto-py-to-exe.json
 output/WDM_configuración_Inno compiler.iss
 output/WDM_installer.exe
 output/WDM_installer_0.0.9.exe
+/output
