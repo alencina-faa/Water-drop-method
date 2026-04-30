@@ -2,6 +2,13 @@
 
 Desktop app based on Tkinter to implement the Water Drop Method and determine the structural stability of soil aggregates.
 
+## Distribution
+
+The application is currently distributed as a compiled build for Windows 64-bit.
+
+- GitHub Releases: https://github.com/alencina-faa/Water-drop-method/releases
+- SourceForge: https://sourceforge.net/projects/water-drop-method/
+
 ## Highlights
 
 - GUI workflow with tabs for camera preview, threshold setup, measurement, drop energy, and video processing.
@@ -42,6 +49,59 @@ python -m Water_drop_method
 ```bash
 pytest -q
 ```
+
+## Tabs Guide
+
+### Camera
+
+Use this tab to preview the camera feed and validate framing before measurements.
+
+- Select the camera device index.
+- Click Start Preview to begin live visualization.
+- Click Stop Preview to stop the stream.
+
+<img src="screenshots/image1.png" alt="Camera tab" width="30%" />
+
+### Set Threshold
+
+Use this tab to compute and confirm the photodiode threshold.
+
+- Select DAC device.
+- Set the number of measures.
+- Click Set Threshold and review the plotted signal and threshold line.
+- Click Confirm Threshold to save it.
+
+<img src="screenshots/image2.png" alt="Set Threshold tab" width="30%" />
+
+### Measurement
+
+Use this tab to execute the drop measurement workflow.
+
+- Select camera and DAC device.
+- Set number of drops and previous frames.
+- Choose output video path using Save File As.
+- Start and stop acquisition with the corresponding buttons.
+
+<img src="screenshots/image3.png" alt="Measurement tab" width="30%" />
+
+### Drop Energy
+
+Use this tab to estimate drop velocity and energy from physical parameters.
+
+- Configure drop weight, fluid density, air density, drag coefficient, and drop height.
+- Click Start Simulation to generate the velocity vs distance curve.
+
+<img src="screenshots/image4.png" alt="Drop Energy tab" width="30%" />
+
+### Video Processing
+
+Use this tab to batch-process saved videos and analyze normalized area over frames.
+
+- Load a folder containing videos.
+- Define hole area manually or by selecting a reference video.
+- Click Process Videos to run analysis and inspect output plots.
+
+<img src="screenshots/image5.png" alt="Video Processing tab" width="30%" />
 
 ## Runtime State Files
 
