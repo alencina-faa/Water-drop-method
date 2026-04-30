@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "water-drop-method"
 version = "0.0.1"
 description = "Water drop method app for soil aggregate structural stability measurements"
-readme = "README.rst"
+readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "pillow",
