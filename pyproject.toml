@@ -1,3 +1,19 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "water-drop-method"
+version = "0.0.1"
+description = "Water drop method app for soil aggregate structural stability measurements"
+readme = "README.rst"
+requires-python = ">=3.10"
+dependencies = [
+    "pillow",
+    "numpy",
+    "matplotlib",
+]
+
 # This project was generated with 0.3.19 using template: https://github.com/beeware/briefcase-template@v0.3.19
 [tool.briefcase]
 project_name = "Water drop method"

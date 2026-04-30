@@ -2,6 +2,8 @@
 __pycache__/
 *.py[cod]
 *$py.class
+.venv/
+venv/
 
 # OSX useful to ignore
 *.DS_Store
@@ -75,3 +77,6 @@ output/WDM_configuración_Inno compiler.iss
 output/WDM_installer.exe
 output/WDM_installer_0.0.9.exe
 /output
+hole_area.txt
+threshold.txt
+umbral.txt

@@ -2,8 +2,8 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import tkinter.filedialog as fd
 from PIL import Image, ImageTk
-from Camera import CameraOpenCV as cam
-from DAC import NIUSB6009 as dac
+from .camera_device import CameraOpenCV as cam
+from .data_acquisition import NIUSB6009 as dac
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -12,6 +12,7 @@ import os
 import cv2
 import math
 import statistics
+from .paths import get_hole_area_file, get_threshold_file
 
 
 class WaterDropMethod:
@@ -624,13 +625,9 @@ class WaterDropMethod:
             # Disable the threshold confirm button
             self.threshold_confirm_button.config(state=tk.DISABLED)
             
-            # Here you would typically store the threshold for later use
-            # or proceed to the next step in your application
-            f = open("threshold.txt", "w")
-
-            f.write(f"{self.threshold_value}\n")
-
-            f.close()
+            threshold_file = get_threshold_file()
+            with open(threshold_file, "w", encoding="utf-8") as f:
+                f.write(f"{self.threshold_value}\n")
 
 #Functions of the measurement tab    
     def save_file_as(self):
@@ -671,9 +668,9 @@ class WaterDropMethod:
             messagebox.showerror("Error", "Please enter a valid positive number for previous frames.")
             return
         
-        #Load the threshold value from the file
+        # Load the threshold value from the state file
         try:
-            with open("threshold.txt", "r") as f:
+            with open(get_threshold_file(), "r", encoding="utf-8") as f:
                 self.threshold = float(f.readline())
         except FileNotFoundError:
             messagebox.showerror("Error", "Threshold file not found. Please set the threshold first.")
@@ -1426,9 +1423,9 @@ class WaterDropMethod:
 
     # ---- Persistence helpers for hole area ----
     def load_hole_area_default(self):
-        """Return saved hole area from hole_area.txt if available, else None."""
+        """Return saved hole area from the app state folder if available, else None."""
         try:
-            with open("hole_area.txt", "r") as f:
+            with open(get_hole_area_file(), "r", encoding="utf-8") as f:
                 line = f.readline().strip()
                 # Accept int or float in file, but store as int
                 val = int(float(line))
@@ -1441,8 +1438,8 @@ class WaterDropMethod:
         return None
 
     def save_hole_area(self, value: int):
-        """Persist hole area to hole_area.txt in the working directory."""
-        with open("hole_area.txt", "w") as f:
+        """Persist hole area to the app state folder."""
+        with open(get_hole_area_file(), "w", encoding="utf-8") as f:
             f.write(f"{int(value)}\n")
 
 def main():
