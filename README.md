@@ -1,5 +1,9 @@
 # Water Drop Method
 
+![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
+![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)
+![Status](https://img.shields.io/badge/status-active-success)
+
 Desktop app based on Tkinter to implement the Water Drop Method and determine the structural stability of soil aggregates.
 
 ## Distribution
@@ -52,56 +56,13 @@ pytest -q
 
 ## Tabs Guide
 
-### Camera
-
-Use this tab to preview the camera feed and validate framing before measurements.
-
-- Select the camera device index.
-- Click Start Preview to begin live visualization.
-- Click Stop Preview to stop the stream.
-
-<img src="screenshots/image1.png" alt="Camera tab" width="30%" />
-
-### Set Threshold
-
-Use this tab to compute and confirm the photodiode threshold.
-
-- Select DAC device.
-- Set the number of measures.
-- Click Set Threshold and review the plotted signal and threshold line.
-- Click Confirm Threshold to save it.
-
-<img src="screenshots/image2.png" alt="Set Threshold tab" width="30%" />
-
-### Measurement
-
-Use this tab to execute the drop measurement workflow.
-
-- Select camera and DAC device.
-- Set number of drops and previous frames.
-- Choose output video path using Save File As.
-- Start and stop acquisition with the corresponding buttons.
-
-<img src="screenshots/image3.png" alt="Measurement tab" width="30%" />
-
-### Drop Energy
-
-Use this tab to estimate drop velocity and energy from physical parameters.
-
-- Configure drop weight, fluid density, air density, drag coefficient, and drop height.
-- Click Start Simulation to generate the velocity vs distance curve.
-
-<img src="screenshots/image4.png" alt="Drop Energy tab" width="30%" />
-
-### Video Processing
-
-Use this tab to batch-process saved videos and analyze normalized area over frames.
-
-- Load a folder containing videos.
-- Define hole area manually or by selecting a reference video.
-- Click Process Videos to run analysis and inspect output plots.
-
-<img src="screenshots/image5.png" alt="Video Processing tab" width="30%" />
+| Tab | What it is used for | Main actions | Screenshot |
+| --- | --- | --- | --- |
+| Camera | Preview the camera feed and validate framing before measurements. | Select camera device, Start Preview, Stop Preview. | <img src="screenshots/image1.png" alt="Camera tab" width="80%" /> |
+| Set Threshold | Compute and confirm the photodiode threshold. | Select DAC device, set number of measures, Set Threshold, Confirm Threshold. | <img src="screenshots/image2.png" alt="Set Threshold tab" width="80%" /> |
+| Measurement | Execute the drop measurement workflow. | Select camera and DAC, set drops and previous frames, Save File As, start/stop acquisition. | <img src="screenshots/image3.png" alt="Measurement tab" width="80%" /> |
+| Drop Energy | Estimate drop velocity and impact energy from physical parameters. | Configure physical values and run Start Simulation. | <img src="screenshots/image4.png" alt="Drop Energy tab" width="80%" /> |
+| Video Processing | Batch-process videos and analyze normalized area over frames. | Load videos folder, define hole area, Process Videos, inspect plots and outputs. | <img src="screenshots/image5.png" alt="Video Processing tab" width="80%" /> |
 
 ## Runtime State Files
 
