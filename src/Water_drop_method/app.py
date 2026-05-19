@@ -2,8 +2,8 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import tkinter.filedialog as fd
 from PIL import Image, ImageTk
-from .camera_device import CameraOpenCV as cam
-from .data_acquisition import NIUSB6009 as dac
+from camera_device import CameraOpenCV as cam
+from data_acquisition import NIUSB6009 as dac
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -12,7 +12,7 @@ import os
 import cv2
 import math
 import statistics
-from .paths import get_hole_area_file, get_threshold_file
+from paths import get_hole_area_file, get_threshold_file
 
 
 class WaterDropMethod:
@@ -869,7 +869,7 @@ class WaterDropMethod:
                 
                 # Plot the data
                 self.ax.plot(dist*100, vel, linewidth=1.0) 
-                self.ax.set_title(f"Water Drop Energy = {1000 * (nrg[i] + nrg[i-1]) / 2:.2f} mJ", fontsize=16)
+                self.ax.set_title(f"Water Drop Energy = {1000 * (nrg[i] + nrg[i-1]) / 2:.3f} mJ", fontsize=16)
                 self.ax.set_xlabel('Distance (cm)', fontsize=12)
                 self.ax.set_ylabel('Drop velocity (m/s)', fontsize=12)
                 self.ax.grid(True)
