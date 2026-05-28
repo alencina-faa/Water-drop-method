@@ -869,7 +869,7 @@ class WaterDropMethod:
                 
                 # Plot the data
                 self.ax.plot(dist*100, vel, linewidth=1.0) 
-                self.ax.set_title(f"Water Drop Energy = {1000 * (nrg[i] + nrg[i-1]) / 2:.3f} mJ", fontsize=16)
+                self.ax.set_title(f"Water Drop Energy = {1000 * (nrg[i] + nrg[i-1]) / 2:.5f} mJ", fontsize=16)
                 self.ax.set_xlabel('Distance (cm)', fontsize=12)
                 self.ax.set_ylabel('Drop velocity (m/s)', fontsize=12)
                 self.ax.grid(True)
