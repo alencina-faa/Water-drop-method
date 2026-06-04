@@ -63,7 +63,7 @@ pytest -q
 | Measurement | Execute the drop measurement workflow. | Select camera and DAC, set drops and previous frames, Save File As, start/stop acquisition. | <img src="screenshots/image3.png" alt="Measurement tab" width="80%" /> |
 | Drop Energy | Estimate drop velocity and impact energy from physical parameters. | Configure physical values and run Start Simulation. | <img src="screenshots/image4.png" alt="Drop Energy tab" width="80%" /> |
 | Video Processing | Batch-process videos and analyze normalized area over frames. | Load videos folder, define hole area, Process Videos, inspect plots and outputs. | <img src="screenshots/image5.png" alt="Video Processing tab" width="80%" /> |
-| Help | Browse a guided, clickable explanation for every tab inside the app. | Select a topic on the left, read the step-by-step guidance on the right. | - |
+| Help | Browse a guided, clickable explanation for every tab inside the app. | Select a topic on the left, read the step-by-step guidance on the right. | <img src="screenshots/image6.png" alt="Help tab" width="80%" /> |
 
 ## Runtime State Files
 
