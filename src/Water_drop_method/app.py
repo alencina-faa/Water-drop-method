@@ -12,7 +12,15 @@ import os
 import cv2
 import math
 import statistics
-from paths import get_hole_area_file, get_threshold_file
+try:
+    from .paths import get_hole_area_file, get_threshold_file
+    from .camera_device import CameraOpenCV as cam
+    from .data_acquisition import NIUSB6009 as dac
+except ImportError:
+    # Allows running this file directly during local debugging.
+    from paths import get_hole_area_file, get_threshold_file
+    from camera_device import CameraOpenCV as cam
+    from data_acquisition import NIUSB6009 as dac
 
 
 class WaterDropMethod:
@@ -31,6 +39,7 @@ class WaterDropMethod:
         self.measurement_frame = ttk.Frame(self.notebook)
         self.drop_energy_frame = ttk.Frame(self.notebook)
         self.video_processing_frame = ttk.Frame(self.notebook)
+        self.help_frame = ttk.Frame(self.notebook)
         
         # Add tabs to notebook
         self.notebook.add(self.camera_frame, text="Camera")
@@ -38,6 +47,7 @@ class WaterDropMethod:
         self.notebook.add(self.measurement_frame, text="Measurement")
         self.notebook.add(self.drop_energy_frame, text="Drop Energy")
         self.notebook.add(self.video_processing_frame, text="Video Processing")
+        self.notebook.add(self.help_frame, text="Help")
         
         # Setup Camera tab
         self.setup_camera_tab()
@@ -53,6 +63,9 @@ class WaterDropMethod:
         
         # Setup Video processing tab
         self.setup_video_proc_tab()
+
+        # Setup Help tab
+        self.setup_help_tab()
         
         # Global camera variable
         self.camera = False
@@ -457,6 +470,442 @@ class WaterDropMethod:
         # Create a frame for the video processing output
         self.video_output_frame = ttk.Frame(self.video_processing_frame)
         self.video_output_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+
+# Setup the help tab
+    def setup_help_tab(self):
+        self.help_sections = [
+            (
+                "overview",
+                "Quick Start",
+                {
+                    "intro": "Use this tab as the guided map for the whole app. Start with Camera, continue with Set Threshold, then Measurement, and finish with Drop Energy or Video Processing depending on what you need.",
+                    "cards": [
+                        {
+                            "title": "Recommended flow",
+                            "items": [
+                                "1. Open Camera and verify framing before capturing data.",
+                                "2. Set Threshold to store the photodiode cutoff used by Measurement.",
+                                "3. Run Measurement to record drops and save the video file.",
+                                "4. Use Drop Energy for the physical simulation or Video Processing for batch analysis.",
+                            ],
+                        },
+                        {
+                            "title": "What this app keeps for you",
+                            "items": [
+                                "Threshold and hole area values are stored in the user state folder.",
+                                "The Measurement tab reuses the saved threshold automatically.",
+                                "Video Processing can reuse a typed hole area or a selected ellipse from a frame.",
+                            ],
+                        },
+                    ],
+                    "tips": [
+                        "If a control is disabled, check whether the previous step was completed first.",
+                        "The left navigation lets you jump directly to the help for each tab.",
+                    ],
+                },
+            ),
+            (
+                "camera",
+                "Camera",
+                {
+                    "intro": "Preview the live camera feed and confirm that the scene is aligned before starting any measurement workflow.",
+                    "cards": [
+                        {
+                            "title": "Main actions",
+                            "items": [
+                                "Select the camera device from the dropdown.",
+                                "Press Start Preview to open the live feed.",
+                                "Press Stop Preview when you are done or before switching workflows.",
+                            ],
+                        },
+                        {
+                            "title": "Good practice",
+                            "items": [
+                                "Keep the sample centered and stable while checking the preview.",
+                                "Stop the preview before moving to thresholding or measurement if the camera is still active.",
+                            ],
+                        },
+                    ],
+                    "tips": [
+                        "If the preview looks frozen, stop it and start it again with the correct device.",
+                    ],
+                },
+            ),
+            (
+                "threshold",
+                "Set Threshold",
+                {
+                    "intro": "Capture photodiode samples, click the plot to choose the threshold, and confirm it so the value is saved for later measurements.",
+                    "cards": [
+                        {
+                            "title": "Main actions",
+                            "items": [
+                                "Choose the DAC device: Test or NIUSB6009.",
+                                "Enter the number of measures to collect.",
+                                "Click Set Threshold to build the plot.",
+                                "Click on the graph to place the red threshold line and then confirm it.",
+                            ],
+                        },
+                        {
+                            "title": "Result",
+                            "items": [
+                                "The selected threshold is written to the persistent threshold file.",
+                                "Measurement reads this stored value automatically.",
+                            ],
+                        },
+                    ],
+                    "tips": [
+                        "Use the Test source when you want to explore the workflow without hardware.",
+                    ],
+                },
+            ),
+            (
+                "measurement",
+                "Measurement",
+                {
+                    "intro": "Record the drop events after the threshold is defined, while the app counts detections and writes the capture video.",
+                    "cards": [
+                        {
+                            "title": "Main actions",
+                            "items": [
+                                "Choose the camera and DAC devices.",
+                                "Set the number of drops to record and the number of previous frames.",
+                                "Use Save File As to choose the output video path.",
+                                "Start Measurement to begin the acquisition loop and use Stop Measurement to interrupt it.",
+                            ],
+                        },
+                        {
+                            "title": "How it behaves",
+                            "items": [
+                                "The app collects initial frames first, then waits for the drop event.",
+                                "Each detection updates the counter shown on the right.",
+                                "The saved threshold must exist before measurement starts.",
+                            ],
+                        },
+                    ],
+                    "tips": [
+                        "If Start Measurement stays disabled, first choose an output file with Save File As.",
+                    ],
+                },
+            ),
+            (
+                "drop_energy",
+                "Drop Energy",
+                {
+                    "intro": "Estimate the velocity curve and impact energy from the physical parameters of the drop and the environment.",
+                    "cards": [
+                        {
+                            "title": "Main inputs",
+                            "items": [
+                                "Drop weight in mg.",
+                                "Water density and air density.",
+                                "Drag coefficient.",
+                                "Drop height in cm.",
+                            ],
+                        },
+                        {
+                            "title": "Output",
+                            "items": [
+                                "Press Start Simulation to render the velocity curve.",
+                                "The title shows the estimated drop energy in mJ.",
+                            ],
+                        },
+                    ],
+                    "tips": [
+                        "If you are comparing scenarios, change one value at a time so the curve is easier to interpret.",
+                    ],
+                },
+            ),
+            (
+                "video_processing",
+                "Video Processing",
+                {
+                    "intro": "Batch-process videos to measure the normalized area over time, either by selecting the hole ellipse manually or by typing its area directly.",
+                    "cards": [
+                        {
+                            "title": "Main actions",
+                            "items": [
+                                "Load Videos Folder to read the video list.",
+                                "Choose a video when you want to draw the hole ellipse from a frame.",
+                                "Use the hole area input and checkbox if you want to skip manual selection.",
+                                "Press Process Videos to generate the plots and outputs.",
+                            ],
+                        },
+                        {
+                            "title": "Manual selection",
+                            "items": [
+                                "Move the slider to locate a representative frame.",
+                                "Confirm the frame, adjust the ellipse, and then confirm the ellipse.",
+                                "The selected area is saved for future sessions.",
+                            ],
+                        },
+                    ],
+                    "tips": [
+                        "The Cancel button is available while batch processing is running.",
+                        "If you already know the hole area, the checkbox is the fastest path.",
+                    ],
+                },
+            ),
+        ]
+        self.help_section_lookup = {key: {"title": title, **payload} for key, title, payload in self.help_sections}
+        self.help_selected_key = None
+
+        help_outer = tk.Frame(self.help_frame, bg="#eef4fb")
+        help_outer.pack(fill=tk.BOTH, expand=True)
+
+        left_panel = tk.Frame(help_outer, bg="#17324d", width=260)
+        left_panel.pack(side=tk.LEFT, fill=tk.Y)
+        left_panel.pack_propagate(False)
+
+        title_label = tk.Label(
+            left_panel,
+            text="Help",
+            bg="#17324d",
+            fg="white",
+            font=("Segoe UI", 18, "bold"),
+            anchor="w",
+        )
+        title_label.pack(fill=tk.X, padx=18, pady=(18, 4))
+
+        subtitle_label = tk.Label(
+            left_panel,
+            text="Choose a tab to see what it does and how to use it.",
+            bg="#17324d",
+            fg="#d6e4f5",
+            wraplength=220,
+            justify=tk.LEFT,
+            anchor="w",
+        )
+        subtitle_label.pack(fill=tk.X, padx=18, pady=(0, 12))
+        self._bind_help_wrap(subtitle_label, left_panel, horizontal_padding=40, min_wrap=140)
+
+        nav_label = tk.Label(
+            left_panel,
+            text="Navigate",
+            bg="#17324d",
+            fg="#8fb3d9",
+            font=("Segoe UI", 10, "bold"),
+            anchor="w",
+        )
+        nav_label.pack(fill=tk.X, padx=18, pady=(0, 8))
+
+        nav_container = tk.Frame(left_panel, bg="#17324d")
+        nav_container.pack(fill=tk.BOTH, expand=True, padx=12, pady=(0, 12))
+
+        self.help_nav_buttons = {}
+        for key, title, _ in self.help_sections:
+            button = tk.Button(
+                nav_container,
+                text=title,
+                command=lambda section_key=key: self.show_help_section(section_key),
+                anchor="w",
+                justify=tk.LEFT,
+                relief=tk.FLAT,
+                bd=0,
+                padx=14,
+                pady=10,
+                bg="#edf2f7",
+                fg="#17324d",
+                activebackground="#dbeafe",
+                activeforeground="#0f172a",
+                highlightthickness=0,
+                font=("Segoe UI", 10, "bold"),
+            )
+            button.pack(fill=tk.X, pady=4)
+            self.help_nav_buttons[key] = button
+
+        footer_label = tk.Label(
+            left_panel,
+            text="The help panel stays inside the app, so you can switch tabs without losing context.",
+            bg="#17324d",
+            fg="#a7bed6",
+            wraplength=220,
+            justify=tk.LEFT,
+            anchor="w",
+            font=("Segoe UI", 9),
+        )
+        footer_label.pack(fill=tk.X, padx=18, pady=(0, 18))
+        self._bind_help_wrap(footer_label, left_panel, horizontal_padding=40, min_wrap=140)
+
+        right_panel = tk.Frame(help_outer, bg="#f8fafc")
+        right_panel.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        self.help_canvas = tk.Canvas(right_panel, bg="#f8fafc", highlightthickness=0)
+        help_scrollbar = ttk.Scrollbar(right_panel, orient=tk.VERTICAL, command=self.help_canvas.yview)
+        self.help_canvas.configure(yscrollcommand=help_scrollbar.set)
+        help_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.help_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        self.help_content_host = tk.Frame(self.help_canvas, bg="#f8fafc")
+        self.help_content_window = self.help_canvas.create_window((0, 0), window=self.help_content_host, anchor="nw")
+
+        def _sync_help_scrollregion(event):
+            self.help_canvas.configure(scrollregion=self.help_canvas.bbox("all"))
+
+        def _sync_help_width(event):
+            self.help_canvas.itemconfigure(self.help_content_window, width=event.width)
+
+        self.help_content_host.bind("<Configure>", _sync_help_scrollregion)
+        self.help_canvas.bind("<Configure>", _sync_help_width)
+        self.root.bind_all("<MouseWheel>", self._on_help_mousewheel, add="+")
+        self.root.bind_all("<Button-4>", self._on_help_mousewheel, add="+")
+        self.root.bind_all("<Button-5>", self._on_help_mousewheel, add="+")
+
+        self.show_help_section("overview")
+
+    def show_help_section(self, section_key):
+        section = self.help_section_lookup[section_key]
+        self.help_selected_key = section_key
+
+        for widget in self.help_content_host.winfo_children():
+            widget.destroy()
+
+        for key, button in self.help_nav_buttons.items():
+            if key == section_key:
+                button.configure(bg="#2563eb", fg="white", activebackground="#1d4ed8", activeforeground="white")
+            else:
+                button.configure(bg="#edf2f7", fg="#17324d", activebackground="#dbeafe", activeforeground="#0f172a")
+
+        header_card = tk.Frame(self.help_content_host, bg="white", bd=1, relief=tk.SOLID)
+        header_card.pack(fill=tk.X, padx=20, pady=(20, 12))
+
+        header_title = tk.Label(
+            header_card,
+            text=section["title"],
+            bg="white",
+            fg="#0f172a",
+            font=("Segoe UI", 20, "bold"),
+            anchor="w",
+            justify=tk.LEFT,
+            wraplength=560,
+        )
+        header_title.pack(fill=tk.X, padx=20, pady=(16, 6))
+        self._bind_help_wrap(header_title, header_card, horizontal_padding=48, min_wrap=180)
+
+        header_intro = tk.Label(
+            header_card,
+            text=section["intro"],
+            bg="white",
+            fg="#334155",
+            font=("Segoe UI", 11),
+            wraplength=620,
+            justify=tk.LEFT,
+            anchor="w",
+        )
+        header_intro.pack(fill=tk.X, padx=20, pady=(0, 16))
+        self._bind_help_wrap(header_intro, header_card, horizontal_padding=48, min_wrap=200)
+
+        body_frame = tk.Frame(self.help_content_host, bg="#f8fafc")
+        body_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=(0, 20))
+
+        for card in section["cards"]:
+            self._create_help_card(body_frame, card["title"], card["items"])
+
+        tips_card = tk.Frame(body_frame, bg="#eff6ff", bd=1, relief=tk.SOLID)
+        tips_card.pack(fill=tk.X, pady=(0, 14))
+
+        tips_title = tk.Label(
+            tips_card,
+            text="Tips",
+            bg="#eff6ff",
+            fg="#1d4ed8",
+            font=("Segoe UI", 11, "bold"),
+            anchor="w",
+        )
+        tips_title.pack(fill=tk.X, padx=16, pady=(12, 4))
+
+        for tip in section["tips"]:
+            tip_label = tk.Label(
+                tips_card,
+                text=f"• {tip}",
+                bg="#eff6ff",
+                fg="#1e293b",
+                wraplength=620,
+                justify=tk.LEFT,
+                anchor="w",
+                font=("Segoe UI", 10),
+            )
+            tip_label.pack(fill=tk.X, padx=16, pady=(0, 10))
+            self._bind_help_wrap(tip_label, tips_card, horizontal_padding=40, min_wrap=200)
+
+    def _create_help_card(self, parent, title, items):
+        card = tk.Frame(parent, bg="white", bd=1, relief=tk.SOLID)
+        card.pack(fill=tk.X, pady=(0, 14))
+
+        card_title = tk.Label(
+            card,
+            text=title,
+            bg="white",
+            fg="#0f172a",
+            font=("Segoe UI", 12, "bold"),
+            anchor="w",
+        )
+        card_title.pack(fill=tk.X, padx=16, pady=(12, 6))
+
+        for item in items:
+            item_label = tk.Label(
+                card,
+                text=f"• {item}",
+                bg="white",
+                fg="#334155",
+                wraplength=620,
+                justify=tk.LEFT,
+                anchor="w",
+                font=("Segoe UI", 10),
+            )
+            item_label.pack(fill=tk.X, padx=16, pady=(0, 8))
+            self._bind_help_wrap(item_label, card, horizontal_padding=40, min_wrap=200)
+
+    def _bind_help_wrap(self, label, container, horizontal_padding=32, min_wrap=180):
+        """Keep help text wrapped to the visible card width."""
+        def _update_wrap(event=None):
+            width = container.winfo_width()
+            if event is not None and getattr(event, "width", 0) > 0:
+                width = event.width
+            if width <= 1:
+                return
+            label.configure(wraplength=max(min_wrap, width - horizontal_padding))
+
+        container.bind("<Configure>", _update_wrap, add="+")
+        self.root.after(0, _update_wrap)
+
+    def _on_help_mousewheel(self, event):
+        """Scroll Help content with mouse wheel when pointer is over the Help panel."""
+        if self.notebook.select() != str(self.help_frame):
+            return
+
+        hovered_widget = self.root.winfo_containing(event.x_root, event.y_root)
+        if hovered_widget is None:
+            return
+        if not self._is_descendant_widget(hovered_widget, self.help_canvas):
+            return
+
+        if getattr(event, "num", None) == 4:
+            step = -1
+        elif getattr(event, "num", None) == 5:
+            step = 1
+        else:
+            if event.delta == 0:
+                return
+            step = -1 if event.delta > 0 else 1
+
+        self.help_canvas.yview_scroll(step, "units")
+        return "break"
+
+    def _is_descendant_widget(self, widget, ancestor):
+        """Return True if widget is ancestor or contained by ancestor."""
+        current = widget
+        while current is not None:
+            if current == ancestor:
+                return True
+            parent_name = current.winfo_parent()
+            if not parent_name:
+                break
+            try:
+                current = current.nametowidget(parent_name)
+            except Exception:
+                break
+        return False
 
 #ENDS THE TABS DEFINITIONS
 

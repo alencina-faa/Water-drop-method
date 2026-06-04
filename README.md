@@ -4,7 +4,7 @@
 ![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)
 ![Status](https://img.shields.io/badge/status-active-success)
 
-Desktop app based on Tkinter to implement the Water Drop Method and determine the structural stability of soil aggregates.
+Desktop app based on Tkinter to implement the Water Drop Method and determine the Sample Breakdown Energy of water-stable soil aggregates.
 
 ## Distribution
 
@@ -63,6 +63,7 @@ pytest -q
 | Measurement | Execute the drop measurement workflow. | Select camera and DAC, set drops and previous frames, Save File As, start/stop acquisition. | <img src="screenshots/image3.png" alt="Measurement tab" width="80%" /> |
 | Drop Energy | Estimate drop velocity and impact energy from physical parameters. | Configure physical values and run Start Simulation. | <img src="screenshots/image4.png" alt="Drop Energy tab" width="80%" /> |
 | Video Processing | Batch-process videos and analyze normalized area over frames. | Load videos folder, define hole area, Process Videos, inspect plots and outputs. | <img src="screenshots/image5.png" alt="Video Processing tab" width="80%" /> |
+| Help | Browse a guided, clickable explanation for every tab inside the app. | Select a topic on the left, read the step-by-step guidance on the right. | - |
 
 ## Runtime State Files
 
