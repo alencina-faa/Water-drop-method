@@ -2,8 +2,6 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import tkinter.filedialog as fd
 from PIL import Image, ImageTk
-from camera_device import CameraOpenCV as cam
-from data_acquisition import NIUSB6009 as dac
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -15,12 +13,12 @@ import statistics
 try:
     from .paths import get_hole_area_file, get_threshold_file
     from .camera_device import CameraOpenCV as cam
-    from .data_acquisition import NIUSB6009 as dac
+    from .data_acquisition import NIUSB6009, ArduinoUno
 except ImportError:
     # Allows running this file directly during local debugging.
     from paths import get_hole_area_file, get_threshold_file
     from camera_device import CameraOpenCV as cam
-    from data_acquisition import NIUSB6009 as dac
+    from data_acquisition import NIUSB6009, ArduinoUno
 
 
 class WaterDropMethod:
@@ -149,8 +147,8 @@ class WaterDropMethod:
         self.DAC_combo_threshold = ttk.Combobox(
             DAC_frame_threshold,
             textvariable=self.DAC_var_threshold,
-            values=["Test", "NIUSB6009"],
-            width=10,
+            values=["Test", "NIUSB6009", "ArduinoUno"],
+            width=12,
             state="readonly"
         )
         self.DAC_combo_threshold.pack(side=tk.TOP)
@@ -228,8 +226,8 @@ class WaterDropMethod:
         self.DAC_combo_measure = ttk.Combobox(
             DAC_frame_measure,
             textvariable=self.DAC_var_measure,
-            values=["Test", "NIUSB6009"],
-            width=10,
+            values=["Test", "NIUSB6009", "ArduinoUno"],
+            width=12,
             state="readonly"
         )
         self.DAC_combo_measure.pack(side=tk.TOP)
@@ -540,7 +538,7 @@ class WaterDropMethod:
                         {
                             "title": "Main actions",
                             "items": [
-                                "Choose the DAC device: Test or NIUSB6009.",
+                                "Choose the DAC device: Test, NIUSB6009 or ArduinoUno.",
                                 "Enter the number of measures to collect.",
                                 "Click Set Threshold to build the plot.",
                                 "Click on the graph to place the red threshold line and then confirm it.",
@@ -913,10 +911,10 @@ class WaterDropMethod:
     def start_preview(self, *args):
         """Start the camera preview."""
         # Close any existing resources
-        cam.close_window
-        cam.stop
-        dac.stop
-        dac.close
+        self.cleanup_camera()
+        
+        self.cleanup_dac()
+        
 
         
         # Get selected device
@@ -970,10 +968,8 @@ class WaterDropMethod:
     def set_threshold(self, *args):
         """Start the measurement and display the plot for threshold selection."""
         # Close any existing resources
-        cam.close_window
-        cam.stop
-        dac.stop
-        dac.close
+        self.cleanup_camera()
+        
 
         # Get the number of measures from the input field
         try:
@@ -985,11 +981,12 @@ class WaterDropMethod:
             return
 
         #Set procedure acording to the selected DAC
-        if self.DAC_var_threshold.get() == "NIUSB6009":
+        selected_dac = self.DAC_var_threshold.get()
+        if selected_dac == "NIUSB6009":
             
             try:
                 # Start the measurement process
-                measurer = dac(device_name="Dev1", channel="ai0", sample_rate=1000, samples_per_channel=10000)
+                measurer = NIUSB6009(device_name="Dev1", channel="ai0", sample_rate=1000, samples_per_channel=10000)
                 measurer.start()
                 
                 i = 0
@@ -1011,7 +1008,27 @@ class WaterDropMethod:
                 messagebox.showerror("Error", f"An error occurred while measuring: {e}")
                 return
 
-        elif self.DAC_var_threshold.get() == "Test":
+        elif selected_dac == "ArduinoUno":
+            try:
+                measurer = ArduinoUno(port="COM3", baudrate=9600)  # Ajustar puerto según corresponda
+                measurer.start()
+                
+                i = 0
+                values = []
+                while i < measures:
+                    value = measurer.measure()
+                    if value is not None:  # Ignorar lecturas fallidas por timeout o buffer vacío
+                        values.append([i, value])
+                        i += 1
+
+                values = np.array(values)
+                measurer.stop()
+                measurer.close()
+            except Exception as e:
+                messagebox.showerror("Error", f"An error occurred while measuring with Arduino: {e}")
+                return
+
+        elif selected_dac == "Test":
             # Start the test process
             file_path = os.path.join(os.path.dirname(__file__), "for_test.tsv")
             with open(file_path) as f:
@@ -1084,20 +1101,35 @@ class WaterDropMethod:
         if self.nombrevid:
             self.start_measurement_button.config(state=tk.NORMAL)
             self.measured_drops_label.config(text='Number of drops registered: ' + str(0))
-            
+
+    def cleanup_camera(self):
+        if hasattr(self, 'camera') and self.camera:
+            try:
+                self.camera.stop()
+                self.camera.close_window()
+            except Exception:
+                pass
+            self.camera = None
+
+    def cleanup_dac(self):
+        if hasattr(self, 'measurer') and self.measurer:
+            try:
+                self.measurer.stop()
+                self.measurer.close()
+            except Exception:
+                pass
+            self.measurer = None            
 
     def start_measurement(self):
         """Start the measurement process."""
         # Close any existing resources
-        cam.close_window
-        cam.stop
-        dac.stop
-        dac.close
+        self.cleanup_camera()
+        
+        self.cleanup_dac()
+        
         # Stop and close the camera if needed
         if hasattr(self, 'camera') and self.camera:
-            self.camera.stop
-            self.camera.close_window
-            self.camera = None
+            self.cleanup_camera()
 
         # Get the number of drops from the input field
         try:
@@ -1129,7 +1161,10 @@ class WaterDropMethod:
         self.start_measurement_button.config(state=tk.DISABLED)
         # Enable the stop button
         self.stop_measurement_button.config(state=tk.NORMAL)
-        
+
+        # The selected device is stored for all the measurement session
+        self.selected_dac = self.DAC_var_measure.get()
+
         # Get selected device
         selected_device = int(self.device_var_measure.get())
         
@@ -1166,16 +1201,17 @@ class WaterDropMethod:
             # All initial frames written, show message and start measurement
             messagebox.showinfo("Start measurement", "If drops are ready, press OK to start measurement.")
             
-            #Set procedure acording to the selected DAC
-            if self.DAC_var_measure.get() == "NIUSB6009":
-                # Start the measurement process
-                self.measurer = dac(device_name="Dev1", channel="ai0", sample_rate=1000, samples_per_channel=10000)
+            # Set procedure according to the selected DAC
+            if self.selected_dac == "NIUSB6009":
+                self.measurer = NIUSB6009(device_name="Dev1", channel="ai0", sample_rate=1000, samples_per_channel=10000)
                 self.measurer.start()
 
-            elif self.DAC_var_measure.get() == "Test":
-                # Start the test process
+            elif self.selected_dac == "ArduinoUno":
+                self.measurer = ArduinoUno(port="COM3", baudrate=9600)
+                self.measurer.start()
+
+            elif self.selected_dac == "Test":
                 self.rng = np.random.default_rng()
-                
 
             # Start the actual measurement process
             self.process_measurement()
@@ -1191,7 +1227,7 @@ class WaterDropMethod:
             self.finish_measurement()
             return 
         
-        if self.DAC_var_measure.get() == "Test":
+        if self.selected_dac == "Test":
             value = self.rng.random()   
 
         else:
@@ -1222,19 +1258,19 @@ class WaterDropMethod:
 
     def take_snapshot_and_continue(self):
         """Take a snapshot and then continue processing."""
-        if hasattr(self, 'camera'):
+        if hasattr(self, 'camera') and self.camera:
             self.camera.take_write_snapshot()
     
         # Update counter and label
         self.current_drops += 1
         self.measured_drops_label.config(text='Number of drops registered: ' + str(self.current_drops))
     
-        if self.DAC_var_measure.get() != "Test":
+        if self.selected_dac != "Test" and hasattr(self, 'measurer') and self.measurer:
             #Starts the measurer task again
             self.measurer.start()
 
-        # Continue processing
-        self.process_measurement()
+        # Asynchronously continue processing through Tkinter loop to recursion and blocking GUI 
+        self.root.after(1, self.process_measurement)
     
     def finish_measurement(self):
         """Clean up after measurement is complete."""
@@ -1246,18 +1282,20 @@ class WaterDropMethod:
     
         
         #Stop and close the measurer task
-        if self.DAC_var_measure.get() == "NIUSB6009": 
-            self.measurer.stop()
-            self.measurer.close()
+        if hasattr(self, 'selected_dac') and self.selected_dac in ["NIUSB6009", "ArduinoUno"]:
+            if hasattr(self, 'measurer') and self.measurer is not None:
+                try:
+                    self.measurer.stop()
+                    self.measurer.close()
+                except Exception:
+                    pass
         
         #Stops all process in cam
-        cam.stop()
+        self.cleanup_camera()
             
         # Stop and close the camera if needed
         if hasattr(self, 'camera') and self.camera:
-            self.camera.stop
-            self.camera.close_window
-            self.camera = None
+            self.cleanup_camera()
         
         # Re-enable the start button
         #self.start_measurement_button.config(state=tk.NORMAL)
@@ -1289,25 +1327,36 @@ class WaterDropMethod:
         Fg = mass * g * (1- rho_a / rho_w) # Gravitational force reduced by buoyancy force(N)
         
         # Initialize arrays to store time, distance, velocity, acceleration, and drag force    
-        time = np.array([0])
-        dist = np.array([0.0])
-        vel = np.array([0.0])
-        nrg = np.array([0.0])
-        accl = np.array([])
-        dragF = np.array([])
+        time_list = [0.0]
+        dist_list = [0.0]
+        vel_list = [0.0]
+        nrg_list = [0.0]
+        accl_list = []
+        dragF_list = []
         
         i = 0
         while True:
-            dragF = np.append(dragF, -0.5*C_d*rho_a*a*vel[i]**2)
-            accl = np.append(accl, (dragF[i] + Fg)/mass)
-            #print(i, dist[i], vel[i], accl[i], dragF[i])
-            vel = np.append(vel, vel[i] + dt*accl[i])
-            nrg = np.append(nrg, 0.5 * mass * vel[i]**2)
-            dist = np.append(dist, dist[i] + dt*vel[i] + 0.5*accl[i]*dt**2)
-            time = np.append(time, time[i] + dt)
-            if dist[i] > distTOT:
+            df = -0.5 * C_d * rho_a * a * vel_list[i]**2
+            acc = (df + Fg) / mass
+            dragF_list.append(df)
+            accl_list.append(acc)
+
+            v_next = vel_list[i] + dt * acc
+            vel_list.append(v_next)
+            nrg_list.append(0.5 * mass * (vel_list[i]**2))
+
+            d_next = dist_list[i] + dt * vel_list[i] + 0.5 * acc * (dt**2)
+            dist_list.append(d_next)
+            time_list.append(time_list[i] + dt)
+            
+            if dist_list[i] > distTOT:
                 # Stop the simulation if the drop has reached the aggregate
-                
+                    
+                # Converts array at the end
+                dist = np.array(dist_list)
+                vel = np.array(vel_list)
+                nrg = np.array(nrg_list)
+
                 # Clear any existing plot
                 for widget in self.simulation_plot_frame.winfo_children():
                     widget.destroy()
@@ -1385,7 +1434,7 @@ class WaterDropMethod:
                 self.hole_area_confirm_button.pack_forget()
 
         # Load video
-        self.cap = cv2.VideoCapture(self.video_folder_path + '/' + self.video_selection.get())
+        self.cap = cv2.VideoCapture(os.path.join(self.video_folder_path, self.video_selection.get()))
         self.total_frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
         self.current_frame_idx = 0
 
@@ -1761,7 +1810,6 @@ class WaterDropMethod:
 
         cap.release()
         out.release()
-        cv2.destroyAllWindows()
         return base, areas
 
     def _compute_normalized_series(self, areas, Agu: float, window: int = 5):
