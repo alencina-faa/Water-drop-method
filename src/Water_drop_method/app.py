@@ -3,7 +3,6 @@ from tkinter import ttk, messagebox
 import tkinter.filedialog as fd
 from PIL import Image, ImageTk
 import numpy as np
-import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import os
@@ -939,8 +938,8 @@ class WaterDropMethod:
         
         # Stop and close the camera if needed
         if hasattr(self, 'camera') and self.camera:
-            self.camera.stop
-            self.camera.close_window
+            self.camera.stop()
+            self.camera.close_window()
             self.camera = None
             
         # Clear the preview image
@@ -1246,7 +1245,7 @@ class WaterDropMethod:
                     self.measurer.stop()
 
                 # Capture and write a frame after a short delay
-                if hasattr(self, 'camera'):
+                if self.camera:
                     # Correctly delay the snapshot by 50ms
                     self.take_snapshot_and_continue()#root.after(1, lambda: self.take_snapshot_and_continue())
                 else:
@@ -1297,12 +1296,15 @@ class WaterDropMethod:
 
         # The camera reference is saved before it changes to None
         camera_ref = self.camera
+        self.camera = None # Clear the camera reference to avoid accidental use during saving
 
         def _writer_thread():
             print(f"Saving {len(frames_to_save)} images to disk...")
             if camera_ref:
                 # Save frames to disk using the camera's method
-                self.camera.save_frames_to_avi(frames_to_save)      
+                camera_ref.save_frames_to_avi(frames_to_save)
+                camera_ref.stop()
+                camera_ref.close_window()      
                 print("Video saved successfully!")
 
         # Execute disk writing in a separate thread to avoid blocking the GUI
@@ -1316,9 +1318,6 @@ class WaterDropMethod:
         else:
             messagebox.showinfo("Measurement Stopped", f"Measurement stopped after recording {self.current_drops} drops.")
 
-        # Save frames to disk
-        self.save_captured_frames_to_disk()
-        
         #Stop and close the measurer task
         if hasattr(self, 'selected_dac') and self.selected_dac in ["NIUSB6009", "ArduinoUno"]:
             if hasattr(self, 'measurer') and self.measurer is not None:
@@ -1327,15 +1326,16 @@ class WaterDropMethod:
                     self.measurer.close()
                 except Exception:
                     pass
-
-        #Stops all process in cam
-        self.cleanup_camera()
             
         # Set flag to stop the measurement process
         self.measuring = False
 
         # Disable the stop button
         self.stop_measurement_button.config(state=tk.DISABLED)
+
+        # Save frames to disk and releases camera resourses in a separate tread to avoid blocking the GUI
+        self.save_captured_frames_to_disk()
+                
 
     def stop_measurement(self):
         """Stop the measurement."""
@@ -1914,7 +1914,6 @@ class WaterDropMethod:
             except Exception as e:
                 # Surface Excel-specific failure then fall back to CSV
                 try:
-                    from tkinter import messagebox
                     messagebox.showwarning(
                         "Excel export failed",
                         f"Could not create Excel file (will create CSV instead):\n{e}"
@@ -1924,7 +1923,6 @@ class WaterDropMethod:
         except Exception as e:
             # Show warning if pandas or engine not available
             try:
-                from tkinter import messagebox
                 messagebox.showwarning(
                     "Excel export unavailable",
                     f"Pandas/engine not available (will create CSV instead):\n{e}"
