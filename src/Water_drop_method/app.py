@@ -10,6 +10,7 @@ import os
 import cv2
 import math
 import statistics
+import threading
 try:
     from .paths import get_hole_area_file, get_threshold_file
     from .camera_device import CameraOpenCV as cam
@@ -1173,6 +1174,9 @@ class WaterDropMethod:
             self.camera = cam(fps=1, width=640, height=480)
             self.camera.start(device=selected_device)
 
+        # Initialize list in RAM memory
+        self.captured_frames = []
+
         self.camera.path_name_save_video = self.nombrevid
         self.camera.set_path_name_save_video()
 
@@ -1259,11 +1263,20 @@ class WaterDropMethod:
     def take_snapshot_and_continue(self):
         """Take a snapshot and then continue processing."""
         if hasattr(self, 'camera') and self.camera:
-            self.camera.take_write_snapshot()
+            #self.camera.take_write_snapshot()
+            #Image is captured but not written to video file.
+            frame = self.camera.get_frame()
+
+            if frame is not None:
+            # Frame is stored into the RAM along with the drop number
+                self.captured_frames.append({
+                'drop_number': self.current_drops + 1,
+                'frame': frame.copy()  # A copy is made to ensure buffer does not changes
+            })
     
         # Update counter and label
         self.current_drops += 1
-        self.measured_drops_label.config(text='Number of drops registered: ' + str(self.current_drops))
+        self.measured_drops_label.config(text=f'Number of drops registered: {self.current_drops}')
     
         if self.selected_dac != "Test" and hasattr(self, 'measurer') and self.measurer:
             #Starts the measurer task again
@@ -1271,6 +1284,29 @@ class WaterDropMethod:
 
         # Asynchronously continue processing through Tkinter loop to recursion and blocking GUI 
         self.root.after(1, self.process_measurement)
+
+    # Save acquired frames to disk
+    def save_captured_frames_to_disk(self):
+        """Save the captured frames stored in RAM to disk in a separate thread."""
+        if not hasattr(self, 'captured_frames') or not self.captured_frames:
+            return
+
+        # Frames are copied to free the main reference
+        frames_to_save = list(self.captured_frames)
+        self.captured_frames = [] # Empty RAM for next measurement session
+
+        # The camera reference is saved before it changes to None
+        camera_ref = self.camera
+
+        def _writer_thread():
+            print(f"Saving {len(frames_to_save)} images to disk...")
+            if camera_ref:
+                # Save frames to disk using the camera's method
+                self.camera.save_frames_to_avi(frames_to_save)      
+                print("Video saved successfully!")
+
+        # Execute disk writing in a separate thread to avoid blocking the GUI
+        threading.Thread(target=_writer_thread, daemon=True).start()
     
     def finish_measurement(self):
         """Clean up after measurement is complete."""
@@ -1279,7 +1315,9 @@ class WaterDropMethod:
             messagebox.showinfo("Measurement Complete", f"Successfully recorded {self.current_drops} drops.")
         else:
             messagebox.showinfo("Measurement Stopped", f"Measurement stopped after recording {self.current_drops} drops.")
-    
+
+        # Save frames to disk
+        self.save_captured_frames_to_disk()
         
         #Stop and close the measurer task
         if hasattr(self, 'selected_dac') and self.selected_dac in ["NIUSB6009", "ArduinoUno"]:
@@ -1289,16 +1327,13 @@ class WaterDropMethod:
                     self.measurer.close()
                 except Exception:
                     pass
-        
+
         #Stops all process in cam
         self.cleanup_camera()
             
-        # Stop and close the camera if needed
-        if hasattr(self, 'camera') and self.camera:
-            self.cleanup_camera()
-        
-        # Re-enable the start button
-        #self.start_measurement_button.config(state=tk.NORMAL)
+        # Set flag to stop the measurement process
+        self.measuring = False
+
         # Disable the stop button
         self.stop_measurement_button.config(state=tk.DISABLED)
 
