@@ -73,6 +73,7 @@ class WaterDropMethod:
 
         # Variable indicating measurement in progress
         self.is_measuring = False
+        self.measurer = None
 
         # Canvas to display the image and draw the hole area
         self.canvas_hole_area = None
@@ -84,16 +85,12 @@ class WaterDropMethod:
         # Widgets created dynamically in Video Processing tab
         self.slider = None
         self.hole_area_confirm_button = None
-#Ends the mainwindow definitions
 
 #STARTS THE TABS DEFINITIONS
-# Setup the camera tab
     def setup_camera_tab(self):
-        # Create a frame for buttons
         camera_buttons_frame = ttk.Frame(self.camera_frame)
         camera_buttons_frame.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
         
-        # Add buttons
         start_preview_button = ttk.Button(
             camera_buttons_frame,
             text='Start Preview',
@@ -108,7 +105,6 @@ class WaterDropMethod:
         )
         stop_preview_button.pack(pady=5)
 
-        # Add device selection dropdown
         device_frame = ttk.Frame(camera_buttons_frame)
         device_frame.pack(pady=5)
         
@@ -125,21 +121,16 @@ class WaterDropMethod:
         )
         self.device_combo.pack(side=tk.TOP)
         
-        # Create a frame for the preview image
         self.preview_frame = ttk.Frame(self.camera_frame)
         self.preview_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
         
-        # Create a label to display the camera preview
         self.preview_label = ttk.Label(self.preview_frame)
         self.preview_label.pack(fill=tk.BOTH, expand=True)
 
-# Setup the threshold tab    
     def setup_threshold_tab(self):
-        # Create a frame for controls
         threshold_controls_frame = ttk.Frame(self.threshold_frame)
         threshold_controls_frame.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
         
-        # Add DAC selection dropdown
         DAC_frame_threshold = ttk.Frame(threshold_controls_frame)
         DAC_frame_threshold.pack(pady=5)
         
@@ -156,7 +147,6 @@ class WaterDropMethod:
         )
         self.DAC_combo_threshold.pack(side=tk.TOP)
 
-        # Add label and input for number of measures
         measures_label = ttk.Label(
             threshold_controls_frame,
             text='Number of measures'
@@ -170,7 +160,6 @@ class WaterDropMethod:
         )
         self.measures_input.pack(pady=(0, 5), fill=tk.X)
         
-        # Add set threshold button
         set_threshold_button = ttk.Button(
             threshold_controls_frame,
             text='Set Threshold',
@@ -178,11 +167,9 @@ class WaterDropMethod:
         )
         set_threshold_button.pack(pady=5)
         
-        # Add confirmation buttons for threshold
         self.confirm_frame = ttk.Frame(threshold_controls_frame)
         self.confirm_frame.pack(pady=5, fill=tk.X)
         
-        # Use a dedicated name to avoid conflicts with other tabs
         self.threshold_confirm_button = ttk.Button(
             self.confirm_frame,
             text='Confirm Threshold',
@@ -191,17 +178,13 @@ class WaterDropMethod:
         )
         self.threshold_confirm_button.pack(side=tk.LEFT, padx=2)
         
-        # Create a frame for the threshold plot
         self.threshold_plot_frame = ttk.Frame(self.threshold_frame)
         self.threshold_plot_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
-# Setup the measurement tab
     def setup_measurement_tab(self):
-        # Create a frame for controls
         measurement_controls_frame = ttk.Frame(self.measurement_frame)
         measurement_controls_frame.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
         
-        # Add camera selection dropdown
         device_frame_measure = ttk.Frame(measurement_controls_frame)
         device_frame_measure.pack(pady=5)
         
@@ -218,7 +201,6 @@ class WaterDropMethod:
         )
         self.device_combo_measure.pack(side=tk.TOP)
         
-        # Add DAC selection dropdown
         DAC_frame_measure = ttk.Frame(measurement_controls_frame)
         DAC_frame_measure.pack(pady=5)
         
@@ -235,7 +217,6 @@ class WaterDropMethod:
         )
         self.DAC_combo_measure.pack(side=tk.TOP)
         
-        # Add label and input for number of drops
         measures_drops_label = ttk.Label(
             measurement_controls_frame,
             text='Number of drops'
@@ -249,7 +230,6 @@ class WaterDropMethod:
         )
         self.measures_drops_input.pack(pady=(0, 5), fill=tk.X)
 
-        # Add label and input for number of previous frames
         measures_frames_label = ttk.Label(
             measurement_controls_frame,
             text='Number of previous frames'
@@ -263,7 +243,6 @@ class WaterDropMethod:
         )
         self.measures_frames_input.pack(pady=(0, 5), fill=tk.X)
 
-        # Add Save file button
         self.save_file_button = ttk.Button(
             measurement_controls_frame,
             text='Save File As',
@@ -271,42 +250,35 @@ class WaterDropMethod:
         )
         self.save_file_button.pack(pady=5)
 
-        # Add Start Measurement button
         self.start_measurement_button = ttk.Button(
             measurement_controls_frame,
             text='Start Measurement',
             command=self.start_measurement,
-            state=tk.DISABLED  # Initially disabled
+            state=tk.DISABLED
         )
         self.start_measurement_button.pack(pady=5)
 
-        # Add Stop Measurement button
         self.stop_measurement_button = ttk.Button(
             measurement_controls_frame,
             text='Stop Measurement',
             command=self.stop_measurement,
-            state=tk.DISABLED  # Initially disabled
+            state=tk.DISABLED
         )
         self.stop_measurement_button.pack(pady=5)
 
-        # Create a frame for the measurement
         measured_drops_frame = ttk.Frame(self.measurement_frame)
         measured_drops_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
-        # Add label output for number of drops registered
         self.measured_drops_label = ttk.Label(
             measured_drops_frame,
-            text='Number of drops registered: ' + str(0)
+            text='Number of drops registered: 0'
         )
         self.measured_drops_label.pack(pady=(50, 5))
 
-#Setup the drop energy tab
     def setup_drop_energy_tab(self):
-        # Create a frame for controls
         drop_energy_controls_frame = ttk.Frame(self.drop_energy_frame)
         drop_energy_controls_frame.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
 
-        # Add label and input for Drop weight
         drops_weight_label = ttk.Label(
             drop_energy_controls_frame,
             text='Drop weight (mg)'
@@ -320,7 +292,6 @@ class WaterDropMethod:
         )
         self.drop_weight_input.pack(pady=(0, 5), fill=tk.X)
 
-        # Add label and input for Water density
         water_density_label = ttk.Label(
             drop_energy_controls_frame,
             text='Water density (kg)'
@@ -334,7 +305,6 @@ class WaterDropMethod:
         )
         self.water_density_input.pack(pady=(0, 5), fill=tk.X)
 
-        # Add label and input for Air density
         air_density_label = ttk.Label(
             drop_energy_controls_frame,
             text='Air density (kg)'
@@ -348,7 +318,6 @@ class WaterDropMethod:
         )
         self.air_density_input.pack(pady=(0, 5), fill=tk.X)
 
-        # Add label and input for Drag coefficient
         drag_coefficient_label = ttk.Label(
             drop_energy_controls_frame,
             text='Drag coefficient'
@@ -362,7 +331,6 @@ class WaterDropMethod:
         )
         self.drag_coefficient_input.pack(pady=(0, 5), fill=tk.X)
 
-        # Add label and input for Drop height
         drop_height_label = ttk.Label(
             drop_energy_controls_frame,
             text='Drop height (cm)'
@@ -376,7 +344,6 @@ class WaterDropMethod:
         )
         self.drop_height_input.pack(pady=(0, 5), fill=tk.X)
 
-        # Add Start simulation button
         self.start_simulation_button = ttk.Button(
             drop_energy_controls_frame,
             text='Start Simulation',
@@ -384,46 +351,37 @@ class WaterDropMethod:
         )
         self.start_simulation_button.pack(pady=5)
 
-        # Create a frame for the threshold plot
         self.simulation_plot_frame = ttk.Frame(self.drop_energy_frame)
         self.simulation_plot_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
-# Setup the video processing tab
     def setup_video_proc_tab(self):
-        # Create a frame for video processing controls
         video_proc_controls_frame = ttk.Frame(self.video_processing_frame)
         video_proc_controls_frame.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
 
-        # Add Load Videos Folder button
         self.load_video_button = ttk.Button(
             video_proc_controls_frame,
             text='Load Videos Folder',
             command=self.load_video_folder
         )
         self.load_video_button.pack(pady=(0,15))
-        
 
-
-        # Add label, check and input for hole area
         hole_area_label = ttk.Label(
             video_proc_controls_frame,
             text='Hole Area (px^2)'
         )
         hole_area_label.pack(pady=(0, 5))
 
-        # Create frame for input and check hole area controls
         hole_area_frame = ttk.Frame(video_proc_controls_frame)
         hole_area_frame.pack(pady=(0, 5))
 
-        # Add input for hole area (load saved default if available)
         default_hole_area = self.load_hole_area_default() or 4000
-        self.hole_area = tk.IntVar(value=default_hole_area)  # Use IntVar for numeric input
+        self.hole_area = tk.IntVar(value=default_hole_area)
         self.hole_area_input = ttk.Entry(
             hole_area_frame,
             textvariable=self.hole_area,
             justify='center',
             width=8,
-            state='disabled'  # Initially disabled
+            state='disabled'
         )
         self.hole_area_input.pack(side=tk.LEFT, pady=(0, 5))
 
@@ -431,13 +389,12 @@ class WaterDropMethod:
         self.hole_area_check = ttk.Checkbutton(
             hole_area_frame,
             text='Use this, or...',
-            command= self.check_action,
-            variable=check_var,  # Use IntVar for checkbox state
-            state='disabled'  # Initially disabled
+            command=self.check_action,
+            variable=check_var,
+            state='disabled'
         )
         self.hole_area_check.pack(side=tk.RIGHT, pady=(0, 5))
 
-        #Add label and drop down for Select video to set hole area
         self.set_hole_area_label = ttk.Label(
             video_proc_controls_frame,
             text='Select video to set hole area'
@@ -448,31 +405,26 @@ class WaterDropMethod:
         self.video_selection_dropdown = ttk.Combobox(
             video_proc_controls_frame,
             textvariable=self.video_selection,
-            state= 'disabled' # Initially disabled
+            state='disabled'
         )
         self.video_selection_dropdown.pack(pady=(0, 5))
 
-        # Enable processing when a video is selected
         self.video_selection_dropdown.bind(
             "<<ComboboxSelected>>",
             lambda event: self.process_videos_button.config(state=tk.NORMAL)
-            )
+        )
 
-        # Add process video button
         self.process_videos_button = ttk.Button(
             video_proc_controls_frame,
             text='Process Videos',
             command=self.process_videos
         )
         self.process_videos_button.pack(pady=(0, 5))
-        self.process_videos_button.config(state=tk.DISABLED)  # Initially disabled
+        self.process_videos_button.config(state=tk.DISABLED)
 
-
-        # Create a frame for the video processing output
         self.video_output_frame = ttk.Frame(self.video_processing_frame)
         self.video_output_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
-# Setup the help tab
     def setup_help_tab(self):
         self.help_sections = [
             (
@@ -858,7 +810,6 @@ class WaterDropMethod:
             self._bind_help_wrap(item_label, card, horizontal_padding=40, min_wrap=200)
 
     def _bind_help_wrap(self, label, container, horizontal_padding=32, min_wrap=180):
-        """Keep help text wrapped to the visible card width."""
         def _update_wrap(event=None):
             width = container.winfo_width()
             if event is not None and getattr(event, "width", 0) > 0:
@@ -871,7 +822,6 @@ class WaterDropMethod:
         self.root.after(0, _update_wrap)
 
     def _on_help_mousewheel(self, event):
-        """Scroll Help content with mouse wheel when pointer is over the Help panel."""
         if self.notebook.select() != str(self.help_frame):
             return
 
@@ -894,7 +844,6 @@ class WaterDropMethod:
         return "break"
 
     def _is_descendant_widget(self, widget, ancestor):
-        """Return True if widget is ancestor or contained by ancestor."""
         current = widget
         while current is not None:
             if current == ancestor:
@@ -908,72 +857,42 @@ class WaterDropMethod:
                 break
         return False
 
-#ENDS THE TABS DEFINITIONS
-
 #Functions for the camera tab
     def start_preview(self, *args):
-        """Start the camera preview."""
-        # Close any existing resources
         self.cleanup_camera()
-        
         self.cleanup_dac()
         
-
-        
-        # Get selected device
         selected_device = int(self.device_var.get())
         
-        # Initialize camera if not already done
         if not hasattr(self, 'camera') or not self.camera:
             self.camera = cam(fps=1, width=640, height=480)
             self.camera.start(device=selected_device)
         
-        # Set flag to continue preview
         self.conti = True
-        
-        # Start the non-blocking update loop
         self.update_camera_preview()
     
     def stop_preview(self, *args):
-        """Stop the camera preview."""
-        # Set flag to stop the preview loop
         self.conti = False
-        
-        # Stop and close the camera if needed
-        if hasattr(self, 'camera') and self.camera:
-            self.camera.stop()
-            self.camera.close_window()
-            self.camera = None
-            
-        # Clear the preview image
+        self.cleanup_camera()
         self.preview_label.configure(image='')
 
     def update_camera_preview(self):
-        """Update the camera preview in a non-blocking way."""
-        if hasattr(self, 'conti') and self.conti and hasattr(self, 'camera'):
-            # Get frame from camera
-            img, wait_key = self.camera.preview_camera()
-            
-            # Convert numpy array to PIL Image
-            pil_img = Image.fromarray(img)
-            
-            # Convert PIL Image to Tkinter PhotoImage
-            tk_img = ImageTk.PhotoImage(image=pil_img)
-            
-            # Update the label with the new image
-            self.preview_label.configure(image=tk_img)
-            self.preview_label.image = tk_img  # Keep a reference to prevent garbage collection
-            
-            # Schedule the next update
-            self.root.after(30, self.update_camera_preview)  # ~33 FPS
+        if hasattr(self, 'conti') and self.conti and hasattr(self, 'camera') and self.camera:
+            try:
+                img, wait_key = self.camera.preview_camera()
+                pil_img = Image.fromarray(img)
+                tk_img = ImageTk.PhotoImage(image=pil_img)
+                self.preview_label.configure(image=tk_img)
+                self.preview_label.image = tk_img
+                self.root.after(30, self.update_camera_preview)
+            except Exception:
+                pass
 
- #Functions of the threshold tab   
+#Functions of the threshold tab   
     def set_threshold(self, *args):
-        """Start the measurement and display the plot for threshold selection."""
-        # Close any existing resources
         self.cleanup_camera()
+        self.cleanup_dac()
 
-        # Get the number of measures from the input field
         try:
             measures = int(self.measures_var.get())
             if measures <= 0:
@@ -989,7 +908,6 @@ class WaterDropMethod:
             error_msg = None
 
             try:
-                # Set procedure according to the selected DAC
                 if selected_dac == "NIUSB6009":
                     measurer = NIUSB6009(device_name="Dev1", channel="ai0", sample_rate=1000, samples_per_channel=10000)
                     measurer.start()
@@ -1006,14 +924,14 @@ class WaterDropMethod:
                     measurer.close()
 
                 elif selected_dac == "ArduinoUno":
-                    measurer = ArduinoUno(port="COM3", baudrate=115200)  # Ajustar puerto según corresponda
+                    measurer = ArduinoUno(port="COM3", baudrate=115200)
                     measurer.start()
                     
                     i = 0
                     temp_values = []
                     while i < measures:
                         value = measurer.measure()
-                        if value is not None:  # Ignorar lecturas fallidas por timeout o buffer vacío
+                        if value is not None:
                             temp_values.append([i, value])
                             i += 1
 
@@ -1030,15 +948,11 @@ class WaterDropMethod:
             except Exception as e:
                 error_msg = str(e)
 
-            # Retornar los datos al hilo principal de Tkinter para graficar
             self.root.after(0, lambda: self._on_set_threshold_finished(values, error_msg))
 
-        # Iniciar la captura de datos en segundo plano sin congelar Tkinter
         threading.Thread(target=_acquisition_worker, daemon=True).start()
 
-
     def _on_set_threshold_finished(self, values, error_msg):
-        """Callback ejecutado en el hilo principal tras obtener los datos."""
         if error_msg:
             messagebox.showerror("Error", f"An error occurred while measuring: {error_msg}")
             return
@@ -1046,72 +960,51 @@ class WaterDropMethod:
         if values is None or len(values) == 0:
             return
 
-        # Store the values for later use
         self.measurement_values = values
         
-        # Clear any existing plot
         for widget in self.threshold_plot_frame.winfo_children():
             widget.destroy()
         
-        # Create a new matplotlib figure
         self.fig = Figure(figsize=(6, 4), dpi=100)
         self.ax = self.fig.add_subplot(111)
         
-        # Plot the data
         self.ax.plot(values[:, 0], values[:, 1])
         self.ax.set_title("Click to set threshold level")
         
-        # Create a canvas to display the figure in Tkinter
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.threshold_plot_frame)
         self.canvas.draw()
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         
-        # Connect the click event
         self.canvas.mpl_connect('button_press_event', self.on_plot_click)
-        
-        # Disable the confirm button initially
         self.threshold_confirm_button.config(state=tk.DISABLED)
     
     def on_plot_click(self, event):
-        """Handle click events on the plot."""
         if event.ydata is not None:
-            # Store the threshold value
             self.threshold_value = event.ydata
-            
-            # Clear the previous plot
             self.ax.clear()
-            
-            # Redraw the data
             self.ax.plot(self.measurement_values[:, 0], self.measurement_values[:, 1])
-            
-            # Draw the threshold line
             self.ax.axhline(y=self.threshold_value, color='r', linestyle='-')
             self.ax.set_title(f"Threshold set at y = {self.threshold_value:.4f}")
-            
-            # Update the canvas
             self.canvas.draw()
-            
-            # Enable the confirm button
             self.threshold_confirm_button.config(state=tk.NORMAL)
     
     def confirm_threshold(self):
-        """Confirm the selected threshold."""
         if self.threshold_value is not None:
             messagebox.showinfo("Threshold Confirmed", f"Threshold value {self.threshold_value:.4f} has been set.")
-            
-            # Disable the threshold confirm button
             self.threshold_confirm_button.config(state=tk.DISABLED)
-            
             threshold_file = get_threshold_file()
             with open(threshold_file, "w", encoding="utf-8") as f:
                 f.write(f"{self.threshold_value}\n")
 
 #Functions of the measurement tab    
     def save_file_as(self):
-        self.nombrevid = fd.asksaveasfilename(defaultextension = 'avi',filetypes=[('Avi Files', '*.avi'), ('All Files', '*.*')])
+        self.nombrevid = fd.asksaveasfilename(
+            defaultextension='avi',
+            filetypes=[('Avi Files', '*.avi'), ('All Files', '*.*')]
+        )
         if self.nombrevid:
             self.start_measurement_button.config(state=tk.NORMAL)
-            self.measured_drops_label.config(text='Number of drops registered: ' + str(0))
+            self.measured_drops_label.config(text='Number of drops registered: 0')
 
     def cleanup_camera(self):
         if hasattr(self, 'camera') and self.camera:
@@ -1133,16 +1026,11 @@ class WaterDropMethod:
 
     def start_measurement(self):
         """Start the measurement process."""
-        # Close any existing resources
-        self.cleanup_camera()
-        
-        self.cleanup_dac()
-        
-        # Stop and close the camera if needed
-        if hasattr(self, 'camera') and self.camera:
-            self.cleanup_camera()
+        self._already_finished = False
 
-        # Get the number of drops from the input field
+        self.cleanup_camera()
+        self.cleanup_dac()
+
         try:
             self.total_drops = int(self.measures_drops.get())
             if self.total_drops <= 0:
@@ -1151,7 +1039,6 @@ class WaterDropMethod:
             messagebox.showerror("Error", "Please enter a valid positive number for drops.")
             return
 
-        # Get the number of previous frames from the input field
         try:
             frames = int(self.measures_frames.get())
             if frames <= 0:
@@ -1159,217 +1046,217 @@ class WaterDropMethod:
         except ValueError:
             messagebox.showerror("Error", "Please enter a valid positive number for previous frames.")
             return
-        
-        # Load the threshold value from the state file
-        try:
-            with open(get_threshold_file(), "r", encoding="utf-8") as f:
-                self.threshold = float(f.readline())
-        except FileNotFoundError:
-            messagebox.showerror("Error", "Threshold file not found. Please set the threshold first.")
+
+        if not hasattr(self, 'nombrevid') or not self.nombrevid:
+            messagebox.showerror("Error", "Please select a destination video file using 'Save File As' first.")
             return
 
-        # Disable the start button to prevent multiple clicks
+        # Load saved threshold
+        try:
+            threshold_file = get_threshold_file()
+            if not os.path.exists(threshold_file):
+                raise FileNotFoundError("Threshold file not found.")
+            with open(threshold_file, "r", encoding="utf-8") as f:
+                content = f.readline().strip()
+                if not content:
+                    raise ValueError("Threshold file is empty.")
+                self.threshold = float(content)
+        except Exception as e:
+            messagebox.showerror(
+                "Error",
+                f"Cannot start measurement: No valid threshold value saved.\n"
+                f"Please set and confirm threshold first.\nDetail: {e}"
+            )
+            return
+
+        # Adjust UI states
+        self.save_file_button.config(state=tk.DISABLED)
         self.start_measurement_button.config(state=tk.DISABLED)
-        # Enable the stop button
         self.stop_measurement_button.config(state=tk.NORMAL)
 
-        # The selected device is stored for all the measurement session
         self.selected_dac = self.DAC_var_measure.get()
-
-        # Get selected device
         selected_device = int(self.device_var_measure.get())
-        
-        # Initialize camera if not already done
-        if not hasattr(self, 'camera') or not self.camera:
+
+        try:
             self.camera = cam(fps=1, width=640, height=480)
             self.camera.start(device=selected_device)
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not initialize camera device {selected_device}: {e}")
+            self.finish_measurement()
+            return
 
-        # Initialize list in RAM memory
         self.captured_frames = []
-
         self.camera.path_name_save_video = self.nombrevid
         self.camera.set_path_name_save_video()
 
-        # Initialize drop counter
         self.current_drops = 0
+        self.drop_in_progress = False
         self.measuring = True
-        
-        # Write initial frames to the video file
+
         self.frame_count = 0
         self.total_frames = frames
         self.write_initial_frames()
-    
+
     def write_initial_frames(self):
         """Write initial frames to the video file in a non-blocking way."""
-        if self.frame_count < self.total_frames and hasattr(self, 'camera'):
+        if not self.measuring:
+            self.finish_measurement()
+            return
+
+        if self.frame_count < self.total_frames and hasattr(self, 'camera') and self.camera:
             try:
                 self.camera.take_write_snapshot()
             except Exception as e:
-                messagebox.showerror("Error", f"An error occurred during measurement: {e}")
+                messagebox.showerror("Error", f"An error occurred during initial frame acquisition: {e}")
                 self.finish_measurement()
                 return
             self.frame_count += 1
-            # Schedule the next frame capture
-            self.root.after(1, self.write_initial_frames)  #1ms delay between frames
+            self.root.after(1, self.write_initial_frames)
         else:
-            # All initial frames written, show message and start measurement
-            messagebox.showinfo("Start measurement", "If drops are ready, press OK to start measurement.")
-            
-            # Set procedure according to the selected DAC
-            if self.selected_dac == "NIUSB6009":
-                self.measurer = NIUSB6009(device_name="Dev1", channel="ai0", sample_rate=1000, samples_per_channel=10000)
-                self.measurer.start()
+            if not self.measuring:
+                self.finish_measurement()
+                return
 
-            elif self.selected_dac == "ArduinoUno":
-                self.measurer = ArduinoUno(port="COM3", baudrate=115200)
-                self.measurer.start()
+            try:
+                if self.selected_dac == "NIUSB6009":
+                    self.measurer = NIUSB6009(device_name="Dev1", channel="ai0", sample_rate=1000, samples_per_channel=10000)
+                    self.measurer.start()
+                elif self.selected_dac == "ArduinoUno":
+                    self.measurer = ArduinoUno(port="COM3", baudrate=115200)
+                    self.measurer.start()
+                elif self.selected_dac == "Test":
+                    self.rng = np.random.default_rng()
+            except Exception as e:
+                messagebox.showerror("Error", f"Could not start DAC device ({self.selected_dac}): {e}")
+                self.finish_measurement()
+                return
 
-            elif self.selected_dac == "Test":
-                self.rng = np.random.default_rng()
-
-            # Start the actual measurement process
             self.process_measurement()
-    
+
     def process_measurement(self):
-        """Process measurements in a non-blocking way."""
-        if self.current_drops >= self.total_drops or not self.measuring:
-            # Measurement complete or stopped
+        """Process measurements in a non-blocking way with hysteresis trigger for drops."""
+        if not self.measuring or self.current_drops >= self.total_drops:
             self.finish_measurement()
-            return 
-        
-        if self.selected_dac == "Test":
-            value = self.rng.random()   
+            return
 
-        else:
-            value = self.measurer.measure()
-        
-        try:    
-            # Check if value is below threshold
-            if (value < self.threshold) and (value is not None) and value:
-                
-                """ if self.DAC_var_measure.get() != "Test":
-                    #Stop the measurer task
-                    self.measurer.stop() """
+        try:
+            # Clear input buffer if serial connection exists to ensure fresh data
+            if hasattr(self, 'measurer') and self.measurer and hasattr(self.measurer, 'ser'):
+                try:
+                    if self.measurer.ser and self.measurer.ser.is_open:
+                        self.measurer.ser.reset_input_buffer()
+                except Exception:
+                    pass
 
-                # Capture and write a frame after a short delay
-                if self.camera:
-                    # Correctly delay the snapshot by 50ms
-                    self.take_snapshot_and_continue()#root.after(1, lambda: self.take_snapshot_and_continue())
-                else:
-                    # If no camera, just continue
-                    self.root.after(1, self.process_measurement)
+            if self.selected_dac == "Test":
+                value = self.rng.random()
             else:
-                # No drop detected, check again immediately without delay
-                self.root.after(1, lambda:self.process_measurement)
+                value = self.measurer.measure()
+
+            if value is not None:
+                if self.drop_in_progress:
+                    # Drop is passing; wait until signal goes back above threshold before re-arming
+                    if value >= self.threshold:
+                        self.drop_in_progress = False
+                else:
+                    # Signal is normal; check if a new drop is detected
+                    if value < self.threshold:
+                        self.drop_in_progress = True
+                        self.take_snapshot()
+
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred during measurement: {e}")
             self.finish_measurement()
             return
 
-    def take_snapshot_and_continue(self):
-        """Take a snapshot and then continue processing."""
-        if hasattr(self, 'camera') and self.camera:
-            #self.camera.take_write_snapshot()
-            #Image is captured but not written to video file.
-            frame = self.camera.get_frame()
+        if self.measuring and self.current_drops < self.total_drops:
+            self.root.after(1, self.process_measurement)
+        else:
+            self.finish_measurement()
 
+    def take_snapshot(self):
+        """Take a single snapshot for the detected drop and update UI label."""
+        if hasattr(self, 'camera') and self.camera:
+            frame = self.camera.get_frame()
             if frame is not None:
-            # Frame is stored into the RAM along with the drop number
                 self.captured_frames.append({
-                'drop_number': self.current_drops + 1,
-                'frame': frame.copy()  # A copy is made to ensure buffer does not changes
-            })
-    
-        # Update counter and label
+                    'drop_number': self.current_drops + 1,
+                    'frame': frame.copy()
+                })
+
         self.current_drops += 1
         self.measured_drops_label.config(text=f'Number of drops registered: {self.current_drops}')
-    
-        """ if self.selected_dac != "Test" and hasattr(self, 'measurer') and self.measurer:
-            #Starts the measurer task again
-            self.measurer.start() """
 
-        # Asynchronously continue processing through Tkinter loop to recursion and blocking GUI 
-        self.root.after(1, self.process_measurement)
-
-    # Save acquired frames to disk
     def save_captured_frames_to_disk(self):
         """Save the captured frames stored in RAM to disk in a separate thread."""
         if not hasattr(self, 'captured_frames') or not self.captured_frames:
             self.cleanup_camera()
             return
 
-        # Frames are copied to free the main reference
         frames_to_save = list(self.captured_frames)
-        self.captured_frames = [] # Empty RAM for next measurement session
+        self.captured_frames = []
 
-        # The camera reference is saved before it changes to None
         camera_ref = self.camera
-        self.camera = None # Clear the camera reference to avoid accidental use during saving
+        self.camera = None
 
         def _writer_thread():
             print(f"Saving {len(frames_to_save)} images to disk...")
             if camera_ref:
-                # Save frames to disk using the camera's method
-                camera_ref.save_frames_to_avi(frames_to_save)
-                camera_ref.stop()
-                camera_ref.close_window()      
-                print("Video saved successfully!")
-
-        # Execute disk writing in a separate thread to avoid blocking the GUI
-        threading.Thread(target=_writer_thread, daemon=True).start()
-    
-    def finish_measurement(self):
-        """Clean up after measurement is complete."""
-        # Show completion message
-        if self.current_drops >= self.total_drops:
-            messagebox.showinfo("Measurement Complete", f"Successfully recorded {self.current_drops} drops.")
-        else:
-            messagebox.showinfo("Measurement Stopped", f"Measurement stopped after recording {self.current_drops} drops.")
-
-        #Stop and close the measurer task
-        if hasattr(self, 'selected_dac') and self.selected_dac in ["NIUSB6009", "ArduinoUno"]:
-            if hasattr(self, 'measurer') and self.measurer is not None:
                 try:
-                    self.measurer.stop()
-                    self.measurer.close()
-                except Exception:
-                    pass
-            
-        # Set flag to stop the measurement process
-        self.measuring = False
+                    camera_ref.save_frames_to_avi(frames_to_save)
+                    camera_ref.stop()
+                    camera_ref.close_window()
+                except Exception as e:
+                    print(f"Error saving video: {e}")
+            print("Video saved successfully!")
 
-        # Disable the stop button
-        self.stop_measurement_button.config(state=tk.DISABLED)
-
-        # Save frames to disk and releases camera resourses in a separate tread to avoid blocking the GUI
-        self.save_captured_frames_to_disk()
-                
+        threading.Thread(target=_writer_thread, daemon=True).start()
 
     def stop_measurement(self):
-        """Stop the measurement."""
-        # Set flag to stop the measurement process
+        """Stop the measurement manually."""
+        if self.measuring:
+            self.measuring = False
+            self.finish_measurement()
+
+    def finish_measurement(self):
+        """Clean up after measurement stops or completes, and reset GUI controls."""
+        if getattr(self, '_already_finished', False):
+            return
+        self._already_finished = True
         self.measuring = False
-    
+
+        # Stop and close DAC device
+        self.cleanup_dac()
+
+        # Show notification message
+        if self.current_drops >= getattr(self, 'total_drops', 0) and getattr(self, 'total_drops', 0) > 0:
+            messagebox.showinfo("Measurement Complete", f"Measurement finished successfully.\nDrops registered: {self.current_drops}")
+        else:
+            messagebox.showinfo("Measurement Stopped", f"Measurement stopped.\nDrops registered: {self.current_drops}")
+
+        # Reset button states back to initial state
+        self.save_file_button.config(state=tk.NORMAL)
+        self.start_measurement_button.config(state=tk.DISABLED)
+        self.stop_measurement_button.config(state=tk.DISABLED)
+
+        # Save frames to disk in background and close camera
+        self.save_captured_frames_to_disk()
+
 #Functions of the drop energy tab
     def start_simulation(self):
-        g = 9.81  # Gravitational acceleration (m/s^2)
-        
-        dt = 0.0001 # Time step (s)
+        g = 9.81
+        dt = 0.0001
 
-        # Set the initial conditions
-        rho_w = float(self.water_density.get())  # Water density (kg/m^3)
-        rho_a = float(self.air_density.get()) #Air density (Kg/m^3)
-        C_d = float(self.drag_coefficient.get())  # Drag coefficient (dimensionless)
-        distTOT = 0.01 * float(self.drop_height.get())  # Drop height (m)
-        mass = 0.000001 * float(self.drops_weight.get())  # Drop weight (kg)
+        rho_w = float(self.water_density.get())
+        rho_a = float(self.air_density.get())
+        C_d = float(self.drag_coefficient.get())
+        distTOT = 0.01 * float(self.drop_height.get())
+        mass = 0.000001 * float(self.drops_weight.get())
         
-        a = np.pi * (3/4 * mass / rho_w / np.pi)**(2/3) # Cross-sectional area of the drop (assumed spherical) (m^2)
+        a = np.pi * (3/4 * mass / rho_w / np.pi)**(2/3)
         
-        ''' --- START OF APPROXIMATE SOLUTION ----'''
-        # Set the simulation parameters        
-        Fg = mass * g * (1- rho_a / rho_w) # Gravitational force reduced by buoyancy force(N)
+        Fg = mass * g * (1 - rho_a / rho_w)
         
-        # Initialize arrays to store time, distance, velocity, acceleration, and drag force    
         time_list = [0.0]
         dist_list = [0.0]
         vel_list = [0.0]
@@ -1392,59 +1279,48 @@ class WaterDropMethod:
             dist_list.append(d_next)
             time_list.append(time_list[i] + dt)
             
-            if (dist_list[i] > distTOT) or (i>100000):
-                # Stop the simulation if the drop has reached the aggregate
-                    
-                # Converts array at the end
+            if (dist_list[i] > distTOT) or (i > 100000):
                 dist = np.array(dist_list)
                 vel = np.array(vel_list)
                 nrg = np.array(nrg_list)
 
-                # Clear any existing plot
                 for widget in self.simulation_plot_frame.winfo_children():
                     widget.destroy()
                 
-                # Create a new matplotlib figure
                 self.fig = Figure(figsize=(6, 4), dpi=100)
                 self.ax = self.fig.add_subplot(111)
                 
-                # Plot the data
-                self.ax.plot(dist*100, vel, linewidth=1.0) 
+                self.ax.plot(dist * 100, vel, linewidth=1.0) 
                 self.ax.set_title(f"Water Drop Energy = {1000 * (nrg[i] + nrg[i-1]) / 2:.5f} mJ", fontsize=16)
                 self.ax.set_xlabel('Distance (cm)', fontsize=12)
                 self.ax.set_ylabel('Drop velocity (m/s)', fontsize=12)
                 self.ax.grid(True)
 
-                # Create a canvas to display the figure in Tkinter
                 self.canvas = FigureCanvasTkAgg(self.fig, master=self.simulation_plot_frame)
                 self.canvas.draw()
                 self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
                 
                 break
             i += 1
-        ''' --- END OF APPROXIMATE SOLUTION ----'''        
-        
+
 #Functions of the video processing tab
     def load_video_folder(self):
-        """Load a video file and process it."""
         self.video_folder_path = fd.askdirectory(
             title="Select Video Folder",
             mustexist=True
         )
         if not self.video_folder_path:
-            return  # User cancelled the file dialog
+            return
         
-        # Get all video files in the selected folder
         self.video_files = [f for f in os.listdir(self.video_folder_path) if f.lower().endswith(('.mp4', '.avi', '.mov'))]
         if not self.video_files:
             messagebox.showerror("Error", "No video files found in the selected folder.")
             return
         self.video_selection_dropdown['values'] = self.video_files
-        self.hole_area_check.config(state='normal')  # Enable the checkbox
-        self.hole_area_input.config(state='normal')  # Enable the input field
+        self.hole_area_check.config(state='normal')
+        self.hole_area_input.config(state='normal')
 
     def check_action(self):
-        """Enable or disable the video selection dropdown based on the checkbox state."""
         if self.hole_area_check.instate(['selected']):
             self.video_selection_dropdown.config(state='disabled')
             self.process_videos_button.config(state=tk.NORMAL)
@@ -1453,12 +1329,7 @@ class WaterDropMethod:
             self.process_videos_button.config(state=tk.DISABLED)        
 
     def process_videos(self):
-        """
-        Process the selected video to set the hole area
-        """     
-        # If the user opted to use the typed-in hole area directly, start batch processing
         if self.hole_area_check.instate(['selected']):
-            # Clear right panel
             for w in self.video_output_frame.winfo_children():
                 w.destroy()
             self.start_processing_all_videos()
@@ -1472,20 +1343,16 @@ class WaterDropMethod:
             self.video_label_hole_area = None
             if hasattr(self, 'slider') and self.slider:
                 self.slider.pack_forget()
-            # Only hide the video processing confirm if it exists
             if hasattr(self, 'hole_area_confirm_button') and self.hole_area_confirm_button:
                 self.hole_area_confirm_button.pack_forget()
 
-        # Load video
         self.cap = cv2.VideoCapture(os.path.join(self.video_folder_path, self.video_selection.get()))
         self.total_frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
         self.current_frame_idx = 0
 
-        # Frame display the video video for hole area selection
         self.video_label_hole_area = tk.Label(self.video_output_frame)
         self.video_label_hole_area.pack()
 
-        # Slider to navigate between frames
         self.slider = ttk.Scale(
             self.video_output_frame,
             from_=0,
@@ -1496,7 +1363,6 @@ class WaterDropMethod:
         )
         self.slider.pack(pady=10)
 
-        # Confirmation button for selecting frame (distinct from threshold confirm)
         self.hole_area_confirm_button = tk.Button(
             self.video_output_frame, 
             text="Confirm", 
@@ -1504,28 +1370,14 @@ class WaterDropMethod:
         )
         self.hole_area_confirm_button.pack(pady=5)
 
-
-
-        # Show the first frame
         self.show_frame(0)
 
-        
-
-        
-        
-
-        
-
-
-
     def on_slider_move(self, val):
-        """When the slider is moved, show the corresponding frame"""
         frame_idx = int(float(val))
         self.current_frame_idx = frame_idx
         self.show_frame(frame_idx)
 
     def show_frame(self, frame_idx):
-        """Show a frame in the label"""
         img = self.get_frame(frame_idx)
         if img is None:
             return
@@ -1535,74 +1387,60 @@ class WaterDropMethod:
         self.video_label_hole_area.configure(image=imgtk)
 
     def get_frame(self, frame_idx):
-        """Return the frame at position frame_idx"""
         self.cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
         ret, frame = self.cap.read()
         if not ret:
             return None
-        # Transform from BGR (OpenCV) to RGB (PIL)
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         return Image.fromarray(frame)
 
     def confirm_frame_for_hole_area_selection(self):
-        """Finalize the frame and pass to canvas"""
-        # Hide video and slider widgets
         self.video_label_hole_area.pack_forget()
         self.slider.pack_forget()
         if hasattr(self, 'hole_area_confirm_button') and self.hole_area_confirm_button:
             self.hole_area_confirm_button.pack_forget()
 
-        # Create canvas
-        self.canvas_hole_area = tk.Canvas(self.video_output_frame, 
-                                width=self.selected_image_hole_area.width, 
-                                height=self.selected_image_hole_area.height
-                                )
+        self.canvas_hole_area = tk.Canvas(
+            self.video_output_frame, 
+            width=self.selected_image_hole_area.width, 
+            height=self.selected_image_hole_area.height
+        )
         self.canvas_hole_area.pack()
 
-        # Show the image as background
         self.bg_image = ImageTk.PhotoImage(self.selected_image_hole_area)
         self.canvas_hole_area.create_image(0, 0, anchor="nw", image=self.bg_image)
 
-        # Elipse confirmation button
         self.btn_elipse_confirmation = tk.Button(self.video_output_frame, text="Confirm ellipse", command=self.confirm_ellipse)
         self.btn_elipse_confirmation.pack(pady=10)
 
         self.draw_ellipse_on_hole()
 
-
     def draw_ellipse_on_hole(self):
-        """Allow the user to draw an ellipse on the canvas to select the hole area"""
-        # Ellipse parameters
         self.center = [self.bg_image.width() / 2, self.bg_image.height() / 2]
         self.rx, self.ry = 100, 60
         self.angle = 0
         self.ellipse = None
 
-        # Interaction flags
         self.dragging_center = False
         self.rotating = False
         self.resizing_x = False
         self.resizing_y = False
 
-        # Draw initial ellipse
         self.draw_ellipse()
 
-        # Bind mouse events
         self.canvas_hole_area.bind("<Button-1>", self.on_click)
         self.canvas_hole_area.bind("<B1-Motion>", self.on_drag)
         self.canvas_hole_area.bind("<ButtonRelease-1>", self.on_release)
 
     def draw_ellipse(self):
-        """Draw rotated ellipse as polygon on top of image."""
         if self.ellipse:
             self.canvas_hole_area.delete(self.ellipse)
 
         points = []
-        for t in range(0, 360, 3):  # step = resolution
+        for t in range(0, 360, 3):
             x = self.rx * math.cos(math.radians(t))
             y = self.ry * math.sin(math.radians(t))
 
-            # apply rotation
             xr = x * math.cos(math.radians(self.angle)) - y * math.sin(math.radians(self.angle))
             yr = x * math.sin(math.radians(self.angle)) + y * math.cos(math.radians(self.angle))
 
@@ -1617,16 +1455,13 @@ class WaterDropMethod:
         if dist_center < 15:
             self.dragging_center = True
         else:
-            # Rightmost point (rotation handle)
             edge_x = self.center[0] + self.rx * math.cos(math.radians(self.angle))
             edge_y = self.center[1] + self.rx * math.sin(math.radians(self.angle))
             if abs(event.x - edge_x) < 15 and abs(event.y - edge_y) < 15:
                 self.rotating = True
-            # Bottom point (resize Y)
             elif abs(event.x - (self.center[0] - self.ry * math.cos(math.radians(self.angle-90)))) < 15 and \
                     abs(event.y - (self.center[1] - self.ry * math.sin(math.radians(self.angle-90)))) < 15:
                 self.resizing_y = True
-            # Left edge (resize X)
             elif abs(event.x - (self.center[0] - self.rx * math.cos(math.radians(self.angle)))) < 15 and \
                     abs(event.y - (self.center[1] - self.rx * math.sin(math.radians(self.angle)))) < 15:
                 self.resizing_x = True
@@ -1651,13 +1486,10 @@ class WaterDropMethod:
         self.resizing_y = False
 
     def confirm_ellipse(self):
-        """Evaluates the area of the ellipse and saves it to the input field."""
         self.hole_area.set(round(math.pi * self.rx * self.ry))
-        # Persist the selected hole area for future runs
         try:
             self.save_hole_area(self.hole_area.get())
         except Exception as e:
-            # Non-fatal: keep going even if persistence fails
             messagebox.showwarning("Warning", f"Couldn't save hole area: {e}")
         
         self.canvas_hole_area.pack_forget()
@@ -1665,27 +1497,24 @@ class WaterDropMethod:
         self.btn_elipse_confirmation.pack_forget()
         self.btn_elipse_confirmation = None
 
-        # Clear the panel and start processing all videos
         for w in self.video_output_frame.winfo_children():
             w.destroy()
         self.start_processing_all_videos()
 
-    # -------------------- Batch Video Processing --------------------
+    # Batch Video Processing
     def start_processing_all_videos(self):
-        """Process all videos in folder, save processed videos and a combined results table, and plot incrementally."""
         if not getattr(self, 'video_folder_path', None):
             messagebox.showerror("Error", "Please load a video folder first.")
             return
         if not getattr(self, 'video_files', None):
             messagebox.showerror("Error", "No videos found to process.")
             return
-        # Disable process button to avoid re-entry
+
         try:
             self.process_videos_button.config(state=tk.DISABLED)
         except Exception:
             pass
 
-        # Output folder INSIDE selected folder: <selected_basename>_PROC
         base_folder_name = os.path.basename(os.path.normpath(self.video_folder_path))
         out_folder = os.path.join(self.video_folder_path, f"{base_folder_name}_PROC")
         try:
@@ -1697,12 +1526,11 @@ class WaterDropMethod:
             except Exception:
                 pass
             return
-        # Prepare Matplotlib area in the right panel
+
         for w in self.video_output_frame.winfo_children():
             w.destroy()
         self.proc_fig = Figure(figsize=(6, 4), dpi=100)
         self.proc_ax = self.proc_fig.add_subplot(111)
-        # No title (requested)
         self.proc_ax.set_xlabel("Image number")
         self.proc_ax.set_ylabel("Normalized area")
         self.proc_ax.set_ylim(-0.1, 1.1)
@@ -1711,18 +1539,16 @@ class WaterDropMethod:
         self.proc_canvas.draw()
         self.proc_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
-        # Progress bar
         self.progress_var = tk.DoubleVar(value=0)
         self.progress_bar = ttk.Progressbar(self.video_output_frame, variable=self.progress_var, maximum=len(self.video_files))
         self.progress_bar.pack(fill=tk.X, padx=5, pady=5)
 
-        # Cancel button
         self.cancel_processing = False
         self.cancel_button = ttk.Button(self.video_output_frame, text='Cancel', command=self.cancel_video_processing)
         self.cancel_button.pack(padx=5, pady=(0,5))
 
-        results = {}  # video_name -> normalized list (without initial NaNs)
-        rupture_points = {}  # video_name -> image number where normalized < 0 (or last)
+        results = {}
+        rupture_points = {}
         Agu = int(self.hole_area.get()) if hasattr(self, 'hole_area') else 4000
 
         for idx, video_file in enumerate(self.video_files, start=1):
@@ -1741,7 +1567,6 @@ class WaterDropMethod:
             image_numbers, normalized = self._compute_normalized_series(areas, Agu, window=5)
             results[name] = normalized
 
-            # Determine rupture point (first image where normalized < 0, else last)
             rupture_idx = None
             for i, val in enumerate(normalized):
                 if isinstance(val, float) and not np.isnan(val) and val < 0:
@@ -1751,13 +1576,10 @@ class WaterDropMethod:
                 rupture_idx = image_numbers[-1] if image_numbers else 0
             rupture_points[name] = rupture_idx
 
-            # Update plot incrementally (skip NaNs already removed)
             self.proc_ax.plot(image_numbers, normalized, label=name, linewidth=1.0)
-            # Legend outside plot, smaller font
             self.proc_ax.legend(loc='center left', bbox_to_anchor=(1.02, 0.5), fontsize=8, frameon=False)
             self.proc_canvas.draw()
             self.root.update_idletasks()
-            # Update progress
             self.progress_var.set(idx)
             self.progress_bar.update()
 
@@ -1770,13 +1592,11 @@ class WaterDropMethod:
             except Exception:
                 rupture_median = None
 
-        # Add vertical line for Rupture if available
         if rupture_median is not None and processed_videos > 0:
             self.proc_ax.axvline(rupture_median, color='black', linestyle='--', label='Rupture')
             self.proc_ax.legend(loc='center left', bbox_to_anchor=(1.02, 0.5), fontsize=8, frameon=False)
             self.proc_canvas.draw()
 
-        # Write results table (with rupture)
         try:
             self._write_results_table(results, out_folder, rupture_median, os.path.basename(os.path.normpath(self.video_folder_path)))
         except Exception as e:
@@ -1787,24 +1607,20 @@ class WaterDropMethod:
         else:
             messagebox.showinfo("Done", f"Processed {processed_videos} videos. Output folder:\n{out_folder}")
 
-        # Re-enable process button
         try:
             self.process_videos_button.config(state=tk.NORMAL)
         except Exception:
             pass
-        # Remove cancel button
         try:
             self.cancel_button.config(state=tk.DISABLED)
         except Exception:
             pass
 
     def _process_single_video(self, video_path: str, out_folder: str):
-        """Return (base_name, areas) and write processed video to out_folder."""
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
             raise RuntimeError("Cannot open video")
 
-        # Read up to frame 21
         frame = None
         for _ in range(21):
             ret, frame = cap.read()
@@ -1856,19 +1672,16 @@ class WaterDropMethod:
         return base, areas
 
     def _compute_normalized_series(self, areas, Agu: float, window: int = 5):
-        """Return (image_numbers, normalized_values) without initial NaNs; first value forced to 1.
-        Uses rolling mean over 'window' frames; denominator = first rolling mean - Agu.
-        """
         if not areas:
             return [], []
         arr = np.array(areas, dtype=float)
         n = len(arr)
         rolling_vals = []
-        image_numbers = []  # Start numbering at 1 for first valid rolling mean
-        for i in range(window - 1, n):  # start at first index with full window
+        image_numbers = []
+        for i in range(window - 1, n):
             window_slice = arr[i - window + 1: i + 1]
             rolling_vals.append(float(np.mean(window_slice)))
-            image_numbers.append(len(rolling_vals))  # sequential numbering starting at 1
+            image_numbers.append(len(rolling_vals))
         if not rolling_vals:
             return [], []
         first_mean = rolling_vals[0]
@@ -1876,12 +1689,10 @@ class WaterDropMethod:
         if abs(denom) <= 1e-12:
             denom = 1.0
         normalized = [(v - Agu) / denom for v in rolling_vals]
-        # Force first value to 1 exactly
         normalized[0] = 1.0
         return image_numbers, normalized
 
     def _write_results_table(self, results: dict, out_folder: str, rupture_median, folder_basename: str):
-        # Determine max length across series
         max_len = max((len(v) for v in results.values()), default=0)
         headers = ["Image number"] + list(results.keys())
         rows = []
@@ -1892,21 +1703,17 @@ class WaterDropMethod:
                 row.append(series[i] if i < len(series) else '')
             rows.append(row)
 
-        # Prefer Excel via pandas if available (lazy import)
         try:
-            import pandas as pd  # type: ignore
-            # Decide engine explicitly to avoid ambiguity
+            import pandas as pd
             try:
-                import openpyxl  # type: ignore  # noqa: F401
+                import openpyxl
                 excel_engine = "openpyxl"
             except ImportError:
                 try:
-                    import xlsxwriter  # type: ignore  # noqa: F401
+                    import xlsxwriter
                     excel_engine = "xlsxwriter"
                 except ImportError:
-                    raise RuntimeError(
-                        "Excel export requires 'openpyxl' or 'xlsxwriter'. Install with 'pip install openpyxl'."
-                    )
+                    raise RuntimeError("Excel export requires 'openpyxl' or 'xlsxwriter'.")
 
             data = {"Image number": [r[0] for r in rows]}
             for idx, name in enumerate(results.keys()):
@@ -1920,32 +1727,22 @@ class WaterDropMethod:
                     rupture_df.to_excel(writer, sheet_name="Rupture", index=False, header=False)
                 return
             except Exception as e:
-                # Surface Excel-specific failure then fall back to CSV
                 try:
-                    messagebox.showwarning(
-                        "Excel export failed",
-                        f"Could not create Excel file (will create CSV instead):\n{e}"
-                    )
+                    messagebox.showwarning("Excel export failed", f"Could not create Excel file (will create CSV instead):\n{e}")
                 except Exception:
                     pass
         except Exception as e:
-            # Show warning if pandas or engine not available
             try:
-                messagebox.showwarning(
-                    "Excel export unavailable",
-                    f"Pandas/engine not available (will create CSV instead):\n{e}"
-                )
+                messagebox.showwarning("Excel export unavailable", f"Pandas/engine not available (will create CSV instead):\n{e}")
             except Exception:
                 pass
 
-        # Fallback to CSV if pandas missing or write failed
         import csv
         csv_path = os.path.join(out_folder, "Results_PROC.csv")
         with open(csv_path, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
             writer.writerow(headers)
             writer.writerows(rows)
-        # Rupture info
         if rupture_median is not None:
             with open(os.path.join(out_folder, "Results_PROC_Rupture.txt"), 'w', encoding='utf-8') as rf:
                 rf.write(f"{folder_basename},{rupture_median}\n")
@@ -1957,38 +1754,29 @@ class WaterDropMethod:
         except Exception:
             pass
 
-    
-
-    # ---- Persistence helpers for hole area ----
     def load_hole_area_default(self):
-        """Return saved hole area from the app state folder if available, else None."""
         try:
             with open(get_hole_area_file(), "r", encoding="utf-8") as f:
                 line = f.readline().strip()
-                # Accept int or float in file, but store as int
                 val = int(float(line))
                 if val > 0:
                     return val
-        except FileNotFoundError:
-            return None
         except Exception:
             return None
         return None
 
     def save_hole_area(self, value: int):
-        """Persist hole area to the app state folder."""
         with open(get_hole_area_file(), "w", encoding="utf-8") as f:
             f.write(f"{int(value)}\n")
 
 def main():
-    """Create and return a launcher with a main_loop() to run the GUI."""
     root = tk.Tk()
     app = WaterDropMethod(root)
 
     class _Launcher:
         def __init__(self, root_ref, app_ref):
             self._root = root_ref
-            self._app = app_ref  # keep a reference to prevent GC
+            self._app = app_ref
 
         def main_loop(self):
             self._root.mainloop()
