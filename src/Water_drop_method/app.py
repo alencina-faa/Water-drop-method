@@ -66,10 +66,13 @@ class WaterDropMethod:
         self.setup_help_tab()
         
         # Global camera variable
-        self.camera = False
+        self.camera = None
         
         # Variable to store threshold value
         self.threshold_value = None
+
+        # Variable indicating measurement in progress
+        self.is_measuring = False
 
         # Canvas to display the image and draw the hole area
         self.canvas_hole_area = None
@@ -969,7 +972,6 @@ class WaterDropMethod:
         """Start the measurement and display the plot for threshold selection."""
         # Close any existing resources
         self.cleanup_camera()
-        
 
         # Get the number of measures from the input field
         try:
@@ -980,60 +982,69 @@ class WaterDropMethod:
             messagebox.showerror("Error", "Please enter a valid positive number for measures.")
             return
 
-        #Set procedure acording to the selected DAC
         selected_dac = self.DAC_var_threshold.get()
-        if selected_dac == "NIUSB6009":
-            
-            try:
-                # Start the measurement process
-                measurer = NIUSB6009(device_name="Dev1", channel="ai0", sample_rate=1000, samples_per_channel=10000)
-                measurer.start()
-                
-                i = 0
-                values=[]
-                while i < int(measures):
-                        
-                    value = measurer.measure()
-                    
-                    values.append([i,value])
-                    
-                    
-                    
-                    i += 1
 
-                values = np.array(values)
-                measurer.stop()
-                measurer.close()
-            except Exception as e:
-                messagebox.showerror("Error", f"An error occurred while measuring: {e}")
-                return
+        def _acquisition_worker():
+            values = None
+            error_msg = None
 
-        elif selected_dac == "ArduinoUno":
             try:
-                measurer = ArduinoUno(port="COM3", baudrate=9600)  # Ajustar puerto según corresponda
-                measurer.start()
-                
-                i = 0
-                values = []
-                while i < measures:
-                    value = measurer.measure()
-                    if value is not None:  # Ignorar lecturas fallidas por timeout o buffer vacío
-                        values.append([i, value])
+                # Set procedure according to the selected DAC
+                if selected_dac == "NIUSB6009":
+                    measurer = NIUSB6009(device_name="Dev1", channel="ai0", sample_rate=1000, samples_per_channel=10000)
+                    measurer.start()
+                    
+                    i = 0
+                    temp_values = []
+                    while i < measures:
+                        value = measurer.measure()
+                        temp_values.append([i, value])
                         i += 1
 
-                values = np.array(values)
-                measurer.stop()
-                measurer.close()
-            except Exception as e:
-                messagebox.showerror("Error", f"An error occurred while measuring with Arduino: {e}")
-                return
+                    values = np.array(temp_values)
+                    measurer.stop()
+                    measurer.close()
 
-        elif selected_dac == "Test":
-            # Start the test process
-            file_path = os.path.join(os.path.dirname(__file__), "for_test.tsv")
-            with open(file_path) as f:
-                lines = f.readlines()
-                values = np.array([list(map(float, line.split())) for line in lines])[:measures]
+                elif selected_dac == "ArduinoUno":
+                    measurer = ArduinoUno(port="COM3", baudrate=115200)  # Ajustar puerto según corresponda
+                    measurer.start()
+                    
+                    i = 0
+                    temp_values = []
+                    while i < measures:
+                        value = measurer.measure()
+                        if value is not None:  # Ignorar lecturas fallidas por timeout o buffer vacío
+                            temp_values.append([i, value])
+                            i += 1
+
+                    values = np.array(temp_values)
+                    measurer.stop()
+                    measurer.close()
+
+                elif selected_dac == "Test":
+                    file_path = os.path.join(os.path.dirname(__file__), "for_test.tsv")
+                    with open(file_path) as f:
+                        lines = f.readlines()
+                        values = np.array([list(map(float, line.split())) for line in lines])[:measures]
+
+            except Exception as e:
+                error_msg = str(e)
+
+            # Retornar los datos al hilo principal de Tkinter para graficar
+            self.root.after(0, lambda: self._on_set_threshold_finished(values, error_msg))
+
+        # Iniciar la captura de datos en segundo plano sin congelar Tkinter
+        threading.Thread(target=_acquisition_worker, daemon=True).start()
+
+
+    def _on_set_threshold_finished(self, values, error_msg):
+        """Callback ejecutado en el hilo principal tras obtener los datos."""
+        if error_msg:
+            messagebox.showerror("Error", f"An error occurred while measuring: {error_msg}")
+            return
+
+        if values is None or len(values) == 0:
+            return
 
         # Store the values for later use
         self.measurement_values = values
@@ -1210,7 +1221,7 @@ class WaterDropMethod:
                 self.measurer.start()
 
             elif self.selected_dac == "ArduinoUno":
-                self.measurer = ArduinoUno(port="COM3", baudrate=9600)
+                self.measurer = ArduinoUno(port="COM3", baudrate=115200)
                 self.measurer.start()
 
             elif self.selected_dac == "Test":
@@ -1221,12 +1232,8 @@ class WaterDropMethod:
     
     def process_measurement(self):
         """Process measurements in a non-blocking way."""
-        if self.current_drops >= self.total_drops:
+        if self.current_drops >= self.total_drops or not self.measuring:
             # Measurement complete or stopped
-            self.finish_measurement()
-            return
-        elif not self.measuring:
-            # Measurement stopped by user
             self.finish_measurement()
             return 
         
@@ -1238,11 +1245,11 @@ class WaterDropMethod:
         
         try:    
             # Check if value is below threshold
-            if value < self.threshold:
+            if (value < self.threshold) and (value is not None) and value:
                 
-                if self.DAC_var_measure.get() != "Test":
+                """ if self.DAC_var_measure.get() != "Test":
                     #Stop the measurer task
-                    self.measurer.stop()
+                    self.measurer.stop() """
 
                 # Capture and write a frame after a short delay
                 if self.camera:
@@ -1250,10 +1257,10 @@ class WaterDropMethod:
                     self.take_snapshot_and_continue()#root.after(1, lambda: self.take_snapshot_and_continue())
                 else:
                     # If no camera, just continue
-                    self.process_measurement()
+                    self.root.after(1, self.process_measurement)
             else:
                 # No drop detected, check again immediately without delay
-                self.root.after(1, lambda:self.process_measurement())
+                self.root.after(1, lambda:self.process_measurement)
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred during measurement: {e}")
             self.finish_measurement()
@@ -1277,9 +1284,9 @@ class WaterDropMethod:
         self.current_drops += 1
         self.measured_drops_label.config(text=f'Number of drops registered: {self.current_drops}')
     
-        if self.selected_dac != "Test" and hasattr(self, 'measurer') and self.measurer:
+        """ if self.selected_dac != "Test" and hasattr(self, 'measurer') and self.measurer:
             #Starts the measurer task again
-            self.measurer.start()
+            self.measurer.start() """
 
         # Asynchronously continue processing through Tkinter loop to recursion and blocking GUI 
         self.root.after(1, self.process_measurement)
@@ -1288,6 +1295,7 @@ class WaterDropMethod:
     def save_captured_frames_to_disk(self):
         """Save the captured frames stored in RAM to disk in a separate thread."""
         if not hasattr(self, 'captured_frames') or not self.captured_frames:
+            self.cleanup_camera()
             return
 
         # Frames are copied to free the main reference
@@ -1384,7 +1392,7 @@ class WaterDropMethod:
             dist_list.append(d_next)
             time_list.append(time_list[i] + dt)
             
-            if dist_list[i] > distTOT:
+            if (dist_list[i] > distTOT) or (i>100000):
                 # Stop the simulation if the drop has reached the aggregate
                     
                 # Converts array at the end
@@ -1427,7 +1435,7 @@ class WaterDropMethod:
             return  # User cancelled the file dialog
         
         # Get all video files in the selected folder
-        self.video_files = [f for f in os.listdir(self.video_folder_path) if f.endswith(('.mp4', '.avi', '.mov'))]
+        self.video_files = [f for f in os.listdir(self.video_folder_path) if f.lower().endswith(('.mp4', '.avi', '.mov'))]
         if not self.video_files:
             messagebox.showerror("Error", "No video files found in the selected folder.")
             return
@@ -1556,7 +1564,7 @@ class WaterDropMethod:
         self.canvas_hole_area.create_image(0, 0, anchor="nw", image=self.bg_image)
 
         # Elipse confirmation button
-        self.btn_elipse_confirmation = tk.Button(self.video_output_frame, text="Confirmar elipse", command=self.confirm_ellipse)
+        self.btn_elipse_confirmation = tk.Button(self.video_output_frame, text="Confirm ellipse", command=self.confirm_ellipse)
         self.btn_elipse_confirmation.pack(pady=10)
 
         self.draw_ellipse_on_hole()
