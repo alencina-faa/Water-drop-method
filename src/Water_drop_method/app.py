@@ -1227,69 +1227,49 @@ class WaterDropMethod:
             elif self.selected_dac == "Test":
                 self.rng = np.random.default_rng()
 
-            # Start the actual measurement process
-            self.process_measurement()
-    
-    def process_measurement(self):
-        """Process measurements in a non-blocking way."""
-        if self.current_drops >= self.total_drops or not self.measuring:
-            # Measurement complete or stopped
-            self.finish_measurement()
-            return 
-        
-        if self.selected_dac == "Test":
-            value = self.rng.random()   
+            # Acquisition runs in a worker thread so the GUI (Stop button) stays responsive
+            self.worker_error = None
+            self.worker_thread = threading.Thread(target=self._acquisition_loop, daemon=True)
+            self.worker_thread.start()
+            self.poll_measurement()
 
-        else:
-            value = self.measurer.measure()
-        
-        try:    
-            # Check if value is below threshold
-            if (value < self.threshold) and (value is not None) and value:
-                
-                """ if self.DAC_var_measure.get() != "Test":
-                    #Stop the measurer task
-                    self.measurer.stop() """
-
-                # Capture and write a frame after a short delay
-                if self.camera:
-                    # Correctly delay the snapshot by 50ms
-                    self.take_snapshot_and_continue()#root.after(1, lambda: self.take_snapshot_and_continue())
+    def _acquisition_loop(self):
+        """Worker thread: read the photodiode as fast as possible and take one frame per drop."""
+        armed = True
+        try:
+            while self.measuring and self.current_drops < self.total_drops:
+                if self.selected_dac == "Test":
+                    value = self.rng.random()
                 else:
-                    # If no camera, just continue
-                    self.root.after(1, self.process_measurement)
-            else:
-                # No drop detected, check again immediately without delay
-                self.root.after(1, lambda:self.process_measurement)
+                    value = self.measurer.measure()
+
+                if value is None:  # ArduinoUno may return None on an invalid serial line
+                    continue
+
+                if value < self.threshold:
+                    if armed:
+                        armed = False
+                        frame = self.camera.get_frame()
+                        self.captured_frames.append({
+                            'drop_number': self.current_drops + 1,
+                            'frame': frame
+                        })
+                        self.current_drops += 1
+                else:
+                    armed = True
         except Exception as e:
-            messagebox.showerror("Error", f"An error occurred during measurement: {e}")
-            self.finish_measurement()
+            self.worker_error = e
+
+    def poll_measurement(self):
+        """GUI side: refresh the counter and detect the end of the worker thread."""
+        self.measured_drops_label.config(text=f'Number of drops registered: {self.current_drops}')
+        if self.worker_thread.is_alive():
+            self.root.after(100, self.poll_measurement)
             return
 
-    def take_snapshot_and_continue(self):
-        """Take a snapshot and then continue processing."""
-        if hasattr(self, 'camera') and self.camera:
-            #self.camera.take_write_snapshot()
-            #Image is captured but not written to video file.
-            frame = self.camera.get_frame()
-
-            if frame is not None:
-            # Frame is stored into the RAM along with the drop number
-                self.captured_frames.append({
-                'drop_number': self.current_drops + 1,
-                'frame': frame.copy()  # A copy is made to ensure buffer does not changes
-            })
-    
-        # Update counter and label
-        self.current_drops += 1
-        self.measured_drops_label.config(text=f'Number of drops registered: {self.current_drops}')
-    
-        """ if self.selected_dac != "Test" and hasattr(self, 'measurer') and self.measurer:
-            #Starts the measurer task again
-            self.measurer.start() """
-
-        # Asynchronously continue processing through Tkinter loop to recursion and blocking GUI 
-        self.root.after(1, self.process_measurement)
+        if self.worker_error is not None:
+            messagebox.showerror("Error", f"An error occurred during measurement: {self.worker_error}")
+        self.finish_measurement()
 
     # Save acquired frames to disk
     def save_captured_frames_to_disk(self):

@@ -21,6 +21,8 @@ class CameraOpenCV:
         if not self.cap.isOpened():
             raise RuntimeError(f"Cannot open camera device {self.device}")
         self.cap.set(cv2.CAP_PROP_TEMPERATURE, 6500)
+        # Keep only the latest frame in the driver buffer (ignored by some drivers)
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
     def preview_camera(self, winname=None):
         if not self.cap or not self.cap.isOpened():
