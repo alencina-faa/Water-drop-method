@@ -72,7 +72,6 @@ class ArduinoUno:
         Converts the 10-bit ADC reading (0-1023) to Volts (0-5V) if convert_to_volts is True.
         """
         if self.connection and self.connection.is_open:
-            self.connection.reset_input_buffer()  # Clear old accumulated readings from the buffer
             line = self.connection.readline().decode('utf-8', errors='ignore').strip()
 
             try:
