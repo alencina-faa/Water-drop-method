@@ -1212,17 +1212,24 @@ class WaterDropMethod:
             # Schedule the next frame capture
             self.root.after(1, self.write_initial_frames)  #1ms delay between frames
         else:
-            # All initial frames written, show message and start measurement
+            # The Arduino is opened before the message: opening the port resets the board (~2 s)
+            try:
+                if self.selected_dac == "ArduinoUno":
+                    self.measurer = ArduinoUno(port="COM3", baudrate=115200)
+                    self.measurer.start()
+            except Exception as e:
+                messagebox.showerror("Error", f"An error occurred during measurement: {e}")
+                self.finish_measurement()
+                return
+
             messagebox.showinfo("Start measurement", "If drops are ready, press OK to start measurement.")
-            
-            # Set procedure according to the selected DAC
+
             if self.selected_dac == "NIUSB6009":
                 self.measurer = NIUSB6009(device_name="Dev1", channel="ai0", sample_rate=1000, samples_per_channel=10000)
                 self.measurer.start()
 
             elif self.selected_dac == "ArduinoUno":
-                self.measurer = ArduinoUno(port="COM3", baudrate=115200)
-                self.measurer.start()
+                self.measurer.stop()  # discards the data buffered while the message was open
 
             elif self.selected_dac == "Test":
                 self.rng = np.random.default_rng()
