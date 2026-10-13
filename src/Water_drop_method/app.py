@@ -487,7 +487,8 @@ class WaterDropMethod:
                                 "1. Open Camera and verify framing before capturing data.",
                                 "2. Set Threshold to store the photodiode cutoff used by Measurement.",
                                 "3. Run Measurement to record drops and save the video file.",
-                                "4. Use Drop Energy for the physical simulation or Video Processing for batch analysis.",
+                                "4. Use Drop Energy for the physical simulation of drop fall and drop energy determination.",
+                                "5. Video Processing for batch analysis and determination of median drop value for aggregate breakdown.",
                             ],
                         },
                         {

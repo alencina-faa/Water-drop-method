@@ -33,6 +33,8 @@ The application is currently distributed as a compiled build for Windows 64-bit.
   - `pillow`
   - `numpy`
   - `matplotlib`
+  - `opencv-python`
+  - `nidaqmx` and/or `pyserial`
 
 ## Install (Editable)
 
