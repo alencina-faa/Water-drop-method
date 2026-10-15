@@ -50,6 +50,16 @@ pip install -e .
 python -m Water_drop_method
 ```
 
+## Run the shadow-triggered snapshot script
+
+The standalone console script asks before calibration and measurement, collects Arduino photodiode readings, and displays them in a gridded plot. Enter and confirm the threshold in volts in the console. It then displays one webcam snapshot per shadow event. Close each snapshot window to resume detection; it rearms only after the photodiode reading returns to or above the threshold. Press `Ctrl+C` to stop measurement.
+
+```bash
+python -m Water_drop_method.Snapshoot_triggered_by_shadows
+```
+
+The defaults are Arduino port `COM3`, webcam index `0`, and `5000` calibration samples. Override them with `--port`, `--camera`, or `--samples`.
+
 ## Run Tests
 
 ```bash
