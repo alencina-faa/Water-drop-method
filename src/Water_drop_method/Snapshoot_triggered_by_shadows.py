@@ -269,7 +269,7 @@ def main() -> int:
         description="Capture webcam snapshots when an Arduino photodiode detects shadows."
     )
     parser.add_argument("--port", default="COM3", help="Arduino serial port (default: COM3)")
-    parser.add_argument("--camera", type=int, default=0, help="USB webcam index (default: 0)")
+    parser.add_argument("--camera", type=int, default=1, help="USB webcam index (default: 1)")
     parser.add_argument(
         "--samples",
         type=int,
